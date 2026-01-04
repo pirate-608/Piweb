@@ -12,21 +12,38 @@
 </head>
 <body>
     <div class="container">
-        <header class="d-flex justify-content-center py-3">
-            <ul class="nav nav-pills">
-                <li class="nav-item"><a href="/" class="nav-link">首页</a></li>
-                <li class="nav-item"><a href="/exam" class="nav-link">开始考试</a></li>
-                <li class="nav-item"><a href="/add" class="nav-link">添加题目</a></li>
-            </ul>
-        </header>
+        <nav class="navbar navbar-expand-lg navbar-light bg-light rounded mb-4 mt-3 shadow-sm">
+            <div class="container-fluid">
+                <a class="navbar-brand fw-bold" href="/">📝 自动阅卷系统</a>
+                <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarMain" aria-controls="navbarMain" aria-expanded="false" aria-label="Toggle navigation">
+                    <span class="navbar-toggler-icon"></span>
+                </button>
+
+                <div class="collapse navbar-collapse" id="navbarMain">
+                    <ul class="navbar-nav me-auto mb-2 mb-lg-0">
+                        <li class="nav-item">
+                            <a class="nav-link" href="/">首页</a>
+                        </li>
+                        <li class="nav-item">
+                            <a class="nav-link" href="/exam">开始考试</a>
+                        </li>
+                        <li class="nav-item">
+                            <a class="nav-link" href="/add">添加题目</a>
+                        </li>
+                    </ul>
+                </div>
+            </div>
+        </nav>
         
         <main>
             {% block content %}{% endblock %}
         </main>
         
-        <footer class="pt-3 mt-4 text-muted border-top text-center">
-            &copy; 2026 自动阅卷系统 (C Core + Python Web)
+        <footer class="pt-3 mt-4 text-muted border-top text-center pb-3">
+            <p>&copy; 2026 自动阅卷系统 (C Core + Python Web)</p>
+            <small>Designed by Pirate-608</small>
         </footer>
     </div>
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/js/bootstrap.bundle.min.js"></script>
 </body>
 </html>
