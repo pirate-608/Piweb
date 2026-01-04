@@ -1,3 +1,5 @@
 C语言的作者是谁?|Dennis Ritchie|10
 Linux的创始人是谁?|Linus Torvalds|10
 HTTP协议默认端口是多少?|80|5
+
+世界上第一台通用电子计算机叫什么名字？|ENIAC|10

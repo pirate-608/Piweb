@@ -63,7 +63,7 @@ def load_questions():
 
 def save_question(content, answer, score):
     # Append with newline
-    with open(DATA_FILE, 'a', encoding='gbk') as f: # Use GBK to match C app likely behavior on Windows
+    with open(DATA_FILE, 'a', encoding='utf-8') as f: # Use UTF-8 for consistency
         f.write(f"\n{content}|{answer}|{score}")
 
 @app.route('/')
