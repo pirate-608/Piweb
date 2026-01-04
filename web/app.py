@@ -4,6 +4,12 @@ from flask import Flask, render_template, request, redirect, url_for
 
 app = Flask(__name__)
 
+@app.after_request
+def add_header(response):
+    # 尝试解决 ngrok 免费版拦截页面问题 (主要针对 API 调用或特定客户端)
+    response.headers['ngrok-skip-browser-warning'] = 'true'
+    return response
+
 # Configuration
 BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 DLL_PATH = os.path.join(BASE_DIR, 'build', 'libgrading.dll')

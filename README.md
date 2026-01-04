@@ -89,6 +89,8 @@ python web/app.py
     ```bash
     ngrok http 5000
     ```
+    *提示：ngrok 免费版首次访问可能会显示警告页，点击 "Visit Site" 继续即可。*
+
 3.  **获取链接**:
     复制终端显示的 `Forwarding` 地址 (例如 `https://xxxx-xxxx.ngrok-free.app`) 发送给其他人即可访问你的自动阅卷系统。
 
