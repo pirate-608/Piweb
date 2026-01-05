@@ -1,7 +1,17 @@
 import os
 import sys
+import platform
 
 class Config:
+    # Determine library extension based on OS
+    system_name = platform.system()
+    if system_name == 'Windows':
+        LIB_NAME = 'libgrading.dll'
+    elif system_name == 'Darwin':
+        LIB_NAME = 'libgrading.dylib'
+    else:
+        LIB_NAME = 'libgrading.so'
+
     if getattr(sys, 'frozen', False):
         # Running as compiled exe
         # sys.executable points to the .exe file
@@ -13,13 +23,13 @@ class Config:
         
         if hasattr(sys, '_MEIPASS'):
              # Onefile mode
-             DLL_PATH = os.path.join(sys._MEIPASS, 'libgrading.dll')
-        elif os.path.exists(os.path.join(internal_dir, 'libgrading.dll')):
+             DLL_PATH = os.path.join(sys._MEIPASS, LIB_NAME)
+        elif os.path.exists(os.path.join(internal_dir, LIB_NAME)):
              # Onedir mode (PyInstaller 6+)
-             DLL_PATH = os.path.join(internal_dir, 'libgrading.dll')
+             DLL_PATH = os.path.join(internal_dir, LIB_NAME)
         else:
              # Fallback (Onedir older or custom)
-             DLL_PATH = os.path.join(BASE_DIR, 'libgrading.dll')
+             DLL_PATH = os.path.join(BASE_DIR, LIB_NAME)
 
         # Data files (writable) should be in BASE_DIR (next to exe)
         DATA_FILE = os.path.join(BASE_DIR, 'questions.txt')
@@ -40,7 +50,7 @@ class Config:
         BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
         
         # Data Paths
-        DLL_PATH = os.path.join(BASE_DIR, 'build', 'libgrading.dll')
+        DLL_PATH = os.path.join(BASE_DIR, 'build', LIB_NAME)
         DATA_FILE = os.path.join(BASE_DIR, 'questions.txt')
         RESULTS_FILE = os.path.join(BASE_DIR, 'results.json')
         

@@ -88,13 +88,19 @@ make
 ```
 
 这将生成：
-*   `build/auto_grader.exe`: 命令行版主程序。
-*   `build/libgrading.dll`: 供 Python 调用的核心动态库。
+*   `build/auto_grader` (Windows下为 `.exe`): 命令行版主程序。
+*   `build/libgrading` (Windows下为 `.dll`, Linux下为 `.so`, macOS下为 `.dylib`): 供 Python 调用的核心动态库。
 
 #### 3. 运行命令行版 (CLI)
 
+Windows:
 ```bash
 ./build/auto_grader.exe
+```
+
+Linux / macOS:
+```bash
+./build/auto_grader
 ```
 *注意：CLI 版本已升级为彩色界面，支持中文显示。*
 
@@ -110,6 +116,9 @@ python -m venv .venv
 
 # 激活虚拟环境 (Windows)
 .\.venv\Scripts\Activate
+
+# 激活虚拟环境 (Linux / macOS)
+source .venv/bin/activate
 
 # 安装依赖
 pip install -r web/requirements.txt
@@ -135,17 +144,20 @@ python web/app.py
     *   **编辑题目**：可以修改题目内容、答案、分数，也可以勾选“删除当前图片”来移除已上传的图片。
     *   **删除题目**：在管理列表中直接删除题目。
 
-## 打包发布 (Windows)
+## 打包发布 (Windows / Linux / macOS)
 
-本系统支持使用 PyInstaller 将 Python Web 端打包为独立的 `.exe` 可执行文件，方便在没有 Python 环境的电脑上运行。
+本系统支持使用 PyInstaller 将 Python Web 端打包为独立的可执行文件，方便在没有 Python 环境的电脑上运行。
 
 ### 1. 准备工作
 
 确保你已经创建了虚拟环境并安装了所有依赖（包括 `pyinstaller`）：
 
 ```bash
-# 激活虚拟环境
+# 激活虚拟环境 (Windows)
 .\.venv\Scripts\Activate
+
+# 激活虚拟环境 (Linux / macOS)
+source .venv/bin/activate
 
 # 安装依赖
 pip install -r web/requirements.txt
@@ -153,16 +165,30 @@ pip install -r web/requirements.txt
 
 ### 2. 执行打包命令
 
-在项目根目录下运行以下命令（确保虚拟环境已激活）：
+在项目根目录下运行以下命令（请根据操作系统选择）：
+
+**Windows:**
 
 ```bash
 pyinstaller --name auto_grader_web --onedir --add-data "web/templates;templates" --add-data "web/static;static" --add-binary "build/libgrading.dll;." --clean --noconfirm web/app.py
 ```
 
+**Linux:**
+
+```bash
+pyinstaller --name auto_grader_web --onedir --add-data "web/templates:templates" --add-data "web/static:static" --add-binary "build/libgrading.so:." --clean --noconfirm web/app.py
+```
+
+**macOS:**
+
+```bash
+pyinstaller --name auto_grader_web --onedir --add-data "web/templates:templates" --add-data "web/static:static" --add-binary "build/libgrading.dylib:." --clean --noconfirm web/app.py
+```
+
 **参数说明**：
 *   `--onedir`: 生成文件夹模式 (推荐，启动快，易于排查问题)。
-*   `--add-data`: 打包 HTML 模板和静态资源。
-*   `--add-binary`: 打包 C 语言编译生成的 `libgrading.dll`。
+*   `--add-data`: 打包 HTML 模板和静态资源 (Windows使用 `;` 分隔，Linux/macOS使用 `:` 分隔)。
+*   `--add-binary`: 打包 C 语言编译生成的动态库。
 
 ### 3. 运行程序
 
@@ -170,7 +196,9 @@ pyinstaller --name auto_grader_web --onedir --add-data "web/templates;templates"
 
 1.  进入 `dist/auto_grader_web/` 文件夹。
 2.  (可选) 如果需要迁移旧题库，将 `questions.txt` 复制到该文件夹中。
-3.  双击 `auto_grader_web.exe` 启动服务。
+3.  启动程序：
+    *   **Windows**: 双击 `auto_grader_web.exe`。
+    *   **Linux / macOS**: 在终端运行 `./auto_grader_web`。
 4.  程序会自动打开浏览器访问系统。
 
 **注意**：

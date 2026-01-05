@@ -1,9 +1,33 @@
 CC = gcc
-CFLAGS = -Wall -g -Iinclude
+CFLAGS = -Wall -g -Iinclude -fPIC
 OBJ = main.o get_data.o put_questions.o get_answer.o grading.o add_questions.o
 BUILD_DIR = build
-TARGET = $(BUILD_DIR)/auto_grader.exe
-LIB_TARGET = $(BUILD_DIR)/libgrading.dll
+
+# Detect OS
+ifeq ($(OS),Windows_NT)
+    TARGET_EXT = .exe
+    LIB_EXT = .dll
+    RM = del /Q
+    RMDIR = rmdir /S /Q
+    MKDIR = if not exist $(BUILD_DIR) mkdir $(BUILD_DIR)
+    CLEAN_CMD = if exist $(BUILD_DIR) $(RMDIR) $(BUILD_DIR)
+else
+    UNAME_S := $(shell uname -s)
+    TARGET_EXT = 
+    RM = rm -f
+    RMDIR = rm -rf
+    MKDIR = mkdir -p $(BUILD_DIR)
+    CLEAN_CMD = $(RMDIR) $(BUILD_DIR)
+    
+    ifeq ($(UNAME_S),Darwin)
+        LIB_EXT = .dylib
+    else
+        LIB_EXT = .so
+    endif
+endif
+
+TARGET = $(BUILD_DIR)/auto_grader$(TARGET_EXT)
+LIB_TARGET = $(BUILD_DIR)/libgrading$(LIB_EXT)
 
 all: $(TARGET) $(LIB_TARGET)
 
@@ -14,15 +38,11 @@ $(LIB_TARGET): src/grading.c include/common.h | $(BUILD_DIR)
 	$(CC) -shared -o $(LIB_TARGET) src/grading.c -Iinclude
 
 $(BUILD_DIR):
-	if not exist $(BUILD_DIR) mkdir $(BUILD_DIR)
+	$(MKDIR)
 
 %.o: src/%.c include/common.h
 	$(CC) $(CFLAGS) -c $< -o $@
 
 clean:
-	del *.o
-	if exist $(BUILD_DIR) rmdir /s /q $(BUILD_DIR)
-
-clean:
-	del /Q $(OBJ)
-	if exist $(BUILD_DIR) rmdir /S /Q $(BUILD_DIR)
+	$(RM) *.o
+	$(CLEAN_CMD)
