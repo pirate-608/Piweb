@@ -55,7 +55,7 @@
                 <td><span class="badge bg-info text-dark">{{ q.category }}</span></td>
                 <td>
                     {% if q.image %}
-                    <span class="badge bg-success">有图</span>
+                    <a href="{{ url_for('uploaded_file', filename=q.image) }}" target="_blank" class="badge bg-success text-decoration-none">查看图片</a>
                     {% else %}
                     <span class="badge bg-secondary">无</span>
                     {% endif %}

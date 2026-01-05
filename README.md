@@ -153,7 +153,7 @@ pip install -r web/requirements.txt
 
 ### 2. 执行打包命令
 
-在项目根目录下运行以下命令：
+在项目根目录下运行以下命令（确保虚拟环境已激活）：
 
 ```bash
 pyinstaller --name auto_grader_web --onedir --add-data "web/templates;templates" --add-data "web/static;static" --add-binary "build/libgrading.dll;." --clean --noconfirm web/app.py

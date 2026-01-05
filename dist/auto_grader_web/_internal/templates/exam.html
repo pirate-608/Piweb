@@ -20,7 +20,7 @@
             <h5 class="card-title" style="white-space: pre-wrap;">{{ q.content }}</h5>
             {% if q.image %}
             <div class="mb-3">
-                <img src="{{ url_for('static', filename='uploads/' + q.image) }}" class="img-fluid rounded" style="max-height: 300px;" alt="题目图片">
+                <img src="{{ url_for('uploaded_file', filename=q.image) }}" class="img-fluid rounded" style="max-height: 300px;" alt="题目图片">
             </div>
             {% endif %}
             <div class="mb-3">
