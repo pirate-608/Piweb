@@ -163,6 +163,16 @@ source .venv/bin/activate
 pip install -r web/requirements.txt
 ```
 
+### ⚠️ 重要提示：数据备份
+
+**重新打包会完全覆盖 `dist/auto_grader_web` 目录！**
+
+如果你之前已经运行过打包后的程序，请在重新打包前**备份以下数据**，否则所有用户数据（注册信息、考试记录、上传图片）都将丢失：
+1.  `dist/auto_grader_web/instance/data.db` (数据库文件)
+2.  `dist/auto_grader_web/uploads/` (图片文件夹)
+
+**建议流程**：备份上述文件 -> 运行打包命令 -> 将备份文件覆盖回原位。
+
 ### 2. 执行打包命令
 
 在项目根目录下运行以下命令（请根据操作系统选择）：
