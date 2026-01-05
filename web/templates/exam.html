@@ -11,6 +11,7 @@
 </div>
 
 <form method="POST" action="/exam">
+    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
     {% for q in questions %}
     <div class="card mb-3">
         <div class="card-header">

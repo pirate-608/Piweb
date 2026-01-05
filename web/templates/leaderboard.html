@@ -1,0 +1,124 @@
+{% extends "base.html" %}
+
+{% block content %}
+<h2 class="mb-4">🏆 排行榜</h2>
+
+<ul class="nav nav-tabs mb-3" id="leaderboardTabs" role="tablist">
+    <li class="nav-item" role="presentation">
+        <button class="nav-link active" id="global-tab" data-bs-toggle="tab" data-bs-target="#global" type="button" role="tab" aria-controls="global" aria-selected="true">全站排名</button>
+    </li>
+    {% for cat in category_leaderboards.keys() %}
+    <li class="nav-item" role="presentation">
+        <button class="nav-link" id="cat-{{ loop.index }}-tab" data-bs-toggle="tab" data-bs-target="#cat-{{ loop.index }}" type="button" role="tab" aria-controls="cat-{{ loop.index }}" aria-selected="false">{{ cat }}</button>
+    </li>
+    {% endfor %}
+</ul>
+
+<div class="tab-content" id="leaderboardTabsContent">
+    <!-- Global Leaderboard -->
+    <div class="tab-pane fade show active" id="global" role="tabpanel" aria-labelledby="global-tab">
+        <div class="card shadow-sm">
+            <div class="card-body">
+                <h5 class="card-title">全站平均正确率排名</h5>
+                <div class="table-responsive">
+                    <table class="table table-hover">
+                        <thead>
+                            <tr>
+                                <th>#</th>
+                                <th>用户</th>
+                                <th>平均正确率</th>
+                                <th>考试次数</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for user in global_leaderboard %}
+                            <tr>
+                                <td>
+                                    {% if loop.index == 1 %}🥇
+                                    {% elif loop.index == 2 %}🥈
+                                    {% elif loop.index == 3 %}🥉
+                                    {% else %}{{ loop.index }}{% endif %}
+                                </td>
+                                <td>{{ user.username }}</td>
+                                <td>
+                                    <div class="progress" style="height: 20px;">
+                                        <div class="progress-bar bg-success" role="progressbar" style="width: {{ user.accuracy }}%;" aria-valuenow="{{ user.accuracy }}" aria-valuemin="0" aria-valuemax="100">{{ user.accuracy }}%</div>
+                                    </div>
+                                </td>
+                                <td>{{ user.total_exams }}</td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+                <canvas id="globalChart" class="mt-4" style="max-height: 300px;"></canvas>
+            </div>
+        </div>
+    </div>
+
+    <!-- Category Leaderboards -->
+    {% for cat, leaderboard in category_leaderboards.items() %}
+    <div class="tab-pane fade" id="cat-{{ loop.index }}" role="tabpanel" aria-labelledby="cat-{{ loop.index }}-tab">
+        <div class="card shadow-sm">
+            <div class="card-body">
+                <h5 class="card-title">{{ cat }} - 正确率排名</h5>
+                <p class="text-muted small">在此分类中表现优异（正确率>80%且尝试>3次）的用户将获得添加该类题目的权限。</p>
+                <div class="table-responsive">
+                    <table class="table table-hover">
+                        <thead>
+                            <tr>
+                                <th>#</th>
+                                <th>用户</th>
+                                <th>正确率</th>
+                                <th>尝试次数</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for user in leaderboard %}
+                            <tr>
+                                <td>{{ loop.index }}</td>
+                                <td>{{ user.username }}</td>
+                                <td>
+                                    <div class="progress" style="height: 20px;">
+                                        <div class="progress-bar bg-info" role="progressbar" style="width: {{ user.accuracy }}%;" aria-valuenow="{{ user.accuracy }}" aria-valuemin="0" aria-valuemax="100">{{ user.accuracy }}%</div>
+                                    </div>
+                                </td>
+                                <td>{{ user.attempts }}</td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+    {% endfor %}
+</div>
+
+<script src="{{ url_for('static', filename='js/chart.js') }}"></script>
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        // Global Chart
+        const globalCtx = document.getElementById('globalChart').getContext('2d');
+        const globalData = {
+            labels: {{ global_leaderboard | map(attribute='username') | list | tojson }},
+            datasets: [{
+                label: '平均正确率 (%)',
+                data: {{ global_leaderboard | map(attribute='accuracy') | list | tojson }},
+                backgroundColor: 'rgba(75, 192, 192, 0.2)',
+                borderColor: 'rgba(75, 192, 192, 1)',
+                borderWidth: 1
+            }]
+        };
+        new Chart(globalCtx, {
+            type: 'bar',
+            data: globalData,
+            options: {
+                scales: {
+                    y: { beginAtZero: true, max: 100 }
+                }
+            }
+        });
+    });
+</script>
+{% endblock %}

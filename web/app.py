@@ -11,6 +11,7 @@ from datetime import datetime
 from werkzeug.utils import secure_filename
 from flask import Flask, render_template, request, redirect, url_for, session, flash, Response, send_from_directory
 from flask_login import LoginManager, login_user, logout_user, login_required, current_user
+from flask_wtf.csrf import CSRFProtect
 from config import Config
 from utils.data_manager import DataManager
 from models import db, User
@@ -33,6 +34,8 @@ else:
 
 app.config.from_object(Config)
 db.init_app(app)
+
+csrf = CSRFProtect(app)
 
 login_manager = LoginManager()
 login_manager.init_app(app)
@@ -76,6 +79,40 @@ def check_exam_mode():
 def allowed_file(filename):
     return '.' in filename and \
            filename.rsplit('.', 1)[1].lower() in Config.ALLOWED_EXTENSIONS
+
+def validate_and_save_image(file):
+    """
+    验证并保存上传的图片文件
+    Returns: (filename, error_message)
+    """
+    if not file or file.filename == '':
+        return None, None
+
+    # 1. Check extension
+    ext = ''
+    if '.' in file.filename:
+        ext = '.' + file.filename.rsplit('.', 1)[1].lower()
+    
+    is_valid = False
+    # Check extension against allowed list
+    if ext and ext[1:] in Config.ALLOWED_EXTENSIONS:
+        is_valid = True
+    # Check mimetype as fallback or primary check
+    elif file.mimetype.startswith('image/'):
+        is_valid = True
+        if not ext:
+            ext = mimetypes.guess_extension(file.mimetype) or '.jpg'
+    
+    if not is_valid:
+        return None, f"不支持的文件格式 '{file.filename}'。仅支持图片文件 (JPG, PNG, GIF, WebP, SVG, BMP, TIFF)。"
+    
+    # Generate unique filename
+    unique_filename = str(uuid.uuid4()) + ext
+    try:
+        file.save(os.path.join(app.config['UPLOAD_FOLDER'], unique_filename))
+        return unique_filename, None
+    except Exception as e:
+        return None, f"保存文件失败: {str(e)}"
 
 # Load C Library
 try:
@@ -221,22 +258,13 @@ def edit_question(id):
             # Handle image upload
             if 'image' in request.files:
                 file = request.files['image']
-                if file:
-                    # Determine extension
-                    ext = ''
-                    if '.' in file.filename:
-                        ext = '.' + file.filename.rsplit('.', 1)[1].lower()
+                if file and file.filename != '':
+                    new_filename, error = validate_and_save_image(file)
+                    if error:
+                        flash(error, 'danger')
+                        return redirect(url_for('edit_question', id=id))
                     
-                    # Check if allowed extension or image mimetype
-                    is_valid = False
-                    if ext and ext[1:] in Config.ALLOWED_EXTENSIONS:
-                        is_valid = True
-                    elif file.mimetype.startswith('image/'):
-                        is_valid = True
-                        if not ext:
-                            ext = mimetypes.guess_extension(file.mimetype) or '.jpg'
-                    
-                    if is_valid:
+                    if new_filename:
                         # Delete old image if exists (and not already deleted above)
                         if image_filename:
                             old_image_path = os.path.join(app.config['UPLOAD_FOLDER'], image_filename)
@@ -245,11 +273,7 @@ def edit_question(id):
                                     os.remove(old_image_path)
                                 except:
                                     pass
-                                    
-                        unique_filename = str(uuid.uuid4()) + ext
-                        file.save(os.path.join(app.config['UPLOAD_FOLDER'], unique_filename))
-                        image_filename = unique_filename
-                        image_filename = unique_filename
+                        image_filename = new_filename
 
             data_manager.update_question(
                 id,
@@ -382,6 +406,8 @@ def exam():
             
             total_score += score
             results.append({
+                'id': q['id'],
+                'category': q.get('category', '默认题集'),
                 'question': q['content'],
                 'user_ans': user_ans,
                 'correct_ans': q['answer'], # Show original full answer string
@@ -389,6 +415,9 @@ def exam():
                 'full_score': q['score']
             })
         
+        # Update user stats and permissions
+        data_manager.update_user_stats(current_user.id, results)
+
         # Save result to history
         # Calculate max score based on the questions in this exam
         exam_questions = [q for q in all_questions if q['id'] in ids]
@@ -420,6 +449,12 @@ def history():
     # Sort by timestamp descending
     results.sort(key=lambda x: x['timestamp'], reverse=True)
     return render_template('history.html', results=results)
+
+@app.route('/leaderboard')
+@login_required
+def leaderboard():
+    data = data_manager.get_leaderboard_data()
+    return render_template('leaderboard.html', global_leaderboard=data['global'], category_leaderboards=data['categories'])
 
 @app.route('/export_history')
 @login_required
@@ -485,7 +520,11 @@ def view_history(result_id):
 @app.route('/add', methods=['GET', 'POST'])
 @login_required
 def add():
-    if not current_user.is_admin:
+    # Check if user is admin or has any permission
+    from models import UserPermission
+    has_perm = UserPermission.query.filter_by(user_id=current_user.id).first() is not None
+    
+    if not current_user.is_admin and not has_perm:
         flash('您没有权限访问该页面', 'danger')
         return redirect(url_for('index'))
         
@@ -500,33 +539,26 @@ def add():
         if contents and answers and scores:
             for i, (c, a, s) in enumerate(zip(contents, answers, scores)):
                 if c and a and s:
+                    cat = categories[i] if i < len(categories) and categories[i] else '默认题集'
+                    
+                    # Check permission for this specific category
+                    if not current_user.is_admin:
+                        if not data_manager.check_permission(current_user.id, cat):
+                            flash(f'您没有权限添加 "{cat}" 类别的题目', 'danger')
+                            continue
+
                     image_filename = ''
                     if i < len(images):
                         file = images[i]
-                        if file:
-                            # Determine extension
-                            ext = ''
-                            if '.' in file.filename:
-                                ext = '.' + file.filename.rsplit('.', 1)[1].lower()
-                            
-                            # Check if allowed extension or image mimetype
-                            is_valid = False
-                            if ext and ext[1:] in Config.ALLOWED_EXTENSIONS:
-                                is_valid = True
-                            elif file.mimetype.startswith('image/'):
-                                is_valid = True
-                                if not ext:
-                                    ext = mimetypes.guess_extension(file.mimetype) or '.jpg'
-                            
-                            if is_valid:
-                                unique_filename = str(uuid.uuid4()) + ext
-                                file.save(os.path.join(app.config['UPLOAD_FOLDER'], unique_filename))
-                                image_filename = unique_filename
+                        filename, error = validate_and_save_image(file)
+                        if error:
+                            flash(f'第 {i+1} 题图片上传失败: {error}', 'warning')
+                        elif filename:
+                            image_filename = filename
                     
-                    cat = categories[i] if i < len(categories) and categories[i] else '默认题集'
                     data_manager.save_question(c, a, int(s), image_filename, cat)
             
-            flash('题目添加成功！', 'success')
+            flash('题目添加处理完成！', 'success')
             return redirect(url_for('manage'))
             
     return render_template('add.html', categories=data_manager.get_categories())

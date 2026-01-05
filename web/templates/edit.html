@@ -3,6 +3,7 @@
 {% block content %}
 <h2 class="mb-4">编辑题目</h2>
 <form method="POST" action="{{ url_for('edit_question', id=id) }}" enctype="multipart/form-data">
+    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
     <div class="mb-3">
         <label for="content" class="form-label">题目描述</label>
         <textarea class="form-control" id="content" name="content" rows="5" required>{{ question.content }}</textarea>
@@ -21,8 +22,8 @@
             </div>
         </div>
         {% endif %}
-        <input type="file" class="form-control" id="image" name="image" accept="image/*">
-        <div class="form-text">上传新图片将替换旧图片。</div>
+        <input type="file" class="form-control" id="image" name="image" accept="image/*, .jpg, .jpeg, .png, .gif, .webp, .svg, .bmp, .tiff">
+        <div class="form-text">上传新图片将替换旧图片。支持 JPG, PNG, GIF, WEBP, SVG, BMP, TIFF 等格式。</div>
     </div>
     <div class="mb-3">
         <label for="answer" class="form-label">标准答案</label>

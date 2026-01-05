@@ -69,7 +69,7 @@ class Config:
     # SESSION_COOKIE_SECURE = True # Uncomment if running over HTTPS
 
     SQLALCHEMY_TRACK_MODIFICATIONS = False
-    ALLOWED_EXTENSIONS = {'png', 'jpg', 'jpeg', 'gif'}
+    ALLOWED_EXTENSIONS = {'png', 'jpg', 'jpeg', 'gif', 'webp', 'svg', 'bmp', 'tiff'}
     MAX_CONTENT_LENGTH = 16 * 1024 * 1024  # 16MB max upload size
 
     # Exam Settings

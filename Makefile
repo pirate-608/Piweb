@@ -1,5 +1,5 @@
 CC = gcc
-CFLAGS = -Wall -g -Iinclude -fPIC
+CFLAGS = -Wall -g -O2 -Iinclude -fPIC
 OBJ = main.o get_data.o put_questions.o get_answer.o grading.o add_questions.o
 BUILD_DIR = build
 

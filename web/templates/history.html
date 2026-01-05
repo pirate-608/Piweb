@@ -32,6 +32,7 @@
                 <td>
                     <a href="{{ url_for('view_history', result_id=result.id) }}" class="btn btn-sm btn-info text-white">查看详情</a>
                     <form action="{{ url_for('delete_history', result_id=result.id) }}" method="POST" class="d-inline" onsubmit="return confirm('确定要删除这条记录吗？');">
+                        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
                         <button type="submit" class="btn btn-sm btn-danger">删除</button>
                     </form>
                 </td>

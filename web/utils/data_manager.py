@@ -2,7 +2,7 @@ import os
 import json
 import shutil
 from datetime import datetime
-from models import db, Question, ExamResult, User
+from models import db, Question, ExamResult, User, UserCategoryStat, UserPermission
 
 class DataManager:
     def __init__(self, config):
@@ -31,6 +31,17 @@ class DataManager:
         """Initialize database and migrate data if empty"""
         with app.app_context():
             db.create_all()
+            
+            # Performance Optimization: Ensure index exists on category
+            try:
+                from sqlalchemy import text
+                # SQLite syntax for creating index if not exists
+                db.session.execute(text("CREATE INDEX IF NOT EXISTS idx_question_category ON question (category)"))
+                db.session.commit()
+            except Exception as e:
+                # Ignore errors if index creation fails (e.g. not supported or other DB issues)
+                print(f"Note: Index optimization check: {e}")
+
             if Question.query.count() == 0:
                 self.migrate_from_files()
             
@@ -100,6 +111,7 @@ class DataManager:
         q = Question(content=content, answer=answer, score=score, image=image, category=category)
         db.session.add(q)
         db.session.commit()
+        self.export_questions_to_txt()
 
     def update_question(self, q_id, content, answer, score, image=None, category=None):
         q = Question.query.get(q_id)
@@ -112,14 +124,35 @@ class DataManager:
             if category is not None:
                 q.category = category
             db.session.commit()
+            self.export_questions_to_txt()
 
     def delete_question(self, q_id):
         q = Question.query.get(q_id)
         if q:
             db.session.delete(q)
             db.session.commit()
+            self.export_questions_to_txt()
             return q.image
         return None
+
+    def export_questions_to_txt(self):
+        """Syncs the current database state to questions.txt for the C core."""
+        try:
+            questions = Question.query.order_by(Question.id).all()
+            with open(self.config.DATA_FILE, 'w', encoding='utf-8') as f:
+                for q in questions:
+                    # Replace newlines with [NEWLINE] marker as expected by some parsers
+                    # or just keep it single line if C parser doesn't handle [NEWLINE] explicitly
+                    # The README says use [NEWLINE], so we will.
+                    content = q.content.replace('\n', '[NEWLINE]')
+                    # Format: Content|Answer|Score
+                    # Note: C core currently ignores image/category, so we stick to the basic 3 fields
+                    # to ensure compatibility.
+                    line = f"{content}|{q.answer}|{q.score}\n"
+                    f.write(line)
+            print(f"Successfully synced {len(questions)} questions to {self.config.DATA_FILE}")
+        except Exception as e:
+            print(f"Error syncing to questions.txt: {e}")
 
     # Deprecated but kept for compatibility if needed (though we should avoid using it)
     def save_all_questions(self, questions):
@@ -251,5 +284,102 @@ class DataManager:
                 'labels': [x['label'] for x in top_errors],
                 'data': [x['count'] for x in top_errors]
             }
+        }
+
+    def update_user_stats(self, user_id, results):
+        """
+        Update user statistics based on exam results.
+        results: list of dicts with keys 'category', 'score', 'full_score'
+        """
+        # Group results by category
+        category_results = {}
+        for r in results:
+            cat = r.get('category', '默认题集')
+            if cat not in category_results:
+                category_results[cat] = {'score': 0, 'max_score': 0}
+            category_results[cat]['score'] += r.get('score', 0)
+            category_results[cat]['max_score'] += r.get('full_score', 0)
+        
+        # Update database
+        for cat, data in category_results.items():
+            stat = UserCategoryStat.query.filter_by(user_id=user_id, category=cat).first()
+            if not stat:
+                stat = UserCategoryStat(user_id=user_id, category=cat)
+                db.session.add(stat)
+            
+            stat.total_attempts += 1
+            stat.total_score += data['score']
+            stat.total_max_score += data['max_score']
+            
+            # Check for permission grant (e.g., > 80% accuracy and > 5 attempts)
+            # This is a simple rule, can be made more complex
+            if stat.total_max_score > 0:
+                accuracy = stat.total_score / stat.total_max_score
+                if accuracy >= 0.8 and stat.total_attempts >= 3:
+                    self.grant_permission(user_id, cat)
+        
+        db.session.commit()
+
+    def grant_permission(self, user_id, category):
+        perm = UserPermission.query.filter_by(user_id=user_id, category=category).first()
+        if not perm:
+            perm = UserPermission(user_id=user_id, category=category)
+            db.session.add(perm)
+            # db.session.commit() # Commit is handled by caller
+
+    def check_permission(self, user_id, category):
+        user = User.query.get(user_id)
+        if user and user.is_admin:
+            return True
+        perm = UserPermission.query.filter_by(user_id=user_id, category=category).first()
+        return perm is not None
+
+    def get_leaderboard_data(self):
+        """
+        Get leaderboard data.
+        Returns a dict with 'global' and 'categories' keys.
+        """
+        # Global Leaderboard (Average Accuracy across all categories)
+        # We can aggregate UserCategoryStat
+        users = User.query.all()
+        global_leaderboard = []
+        
+        for user in users:
+            stats = UserCategoryStat.query.filter_by(user_id=user.id).all()
+            total_score = sum(s.total_score for s in stats)
+            total_max = sum(s.total_max_score for s in stats)
+            accuracy = (total_score / total_max * 100) if total_max > 0 else 0
+            
+            if total_max > 0: # Only include users who have taken exams
+                global_leaderboard.append({
+                    'username': user.username,
+                    'accuracy': round(accuracy, 1),
+                    'total_exams': sum(s.total_attempts for s in stats)
+                })
+        
+        global_leaderboard.sort(key=lambda x: x['accuracy'], reverse=True)
+        
+        # Category Leaderboards
+        categories = self.get_categories()
+        category_leaderboards = {}
+        
+        for cat in categories:
+            cat_stats = UserCategoryStat.query.filter_by(category=cat).all()
+            leaderboard = []
+            for stat in cat_stats:
+                if stat.total_max_score > 0:
+                    acc = (stat.total_score / stat.total_max_score * 100)
+                    leaderboard.append({
+                        'username': stat.user.username,
+                        'accuracy': round(acc, 1),
+                        'attempts': stat.total_attempts
+                    })
+            leaderboard.sort(key=lambda x: x['accuracy'], reverse=True)
+            if leaderboard:
+                category_leaderboards[cat] = leaderboard
+                
+        return {
+            'global': global_leaderboard[:10], # Top 10
+            'categories': category_leaderboards
         }
 

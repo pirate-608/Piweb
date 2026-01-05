@@ -24,7 +24,7 @@ class Question(db.Model):
     answer = db.Column(db.String(500), nullable=False)
     score = db.Column(db.Integer, default=10)
     image = db.Column(db.String(200), nullable=True)
-    category = db.Column(db.String(100), default='默认题集')
+    category = db.Column(db.String(100), default='默认题集', index=True)
 
     def to_dict(self):
         return {
@@ -65,21 +65,19 @@ class ExamResult(db.Model):
             'details': self.details
         }
 
-    @property
-    def details(self):
-        if self.details_json:
-            return json.loads(self.details_json)
-        return []
+class UserCategoryStat(db.Model):
+    id = db.Column(db.Integer, primary_key=True)
+    user_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False)
+    category = db.Column(db.String(100), nullable=False)
+    total_attempts = db.Column(db.Integer, default=0)
+    total_score = db.Column(db.Integer, default=0)
+    total_max_score = db.Column(db.Integer, default=0)
+    
+    user = db.relationship('User', backref=db.backref('category_stats', lazy=True))
 
-    @details.setter
-    def details(self, value):
-        self.details_json = json.dumps(value, ensure_ascii=False)
-
-    def to_dict(self):
-        return {
-            'id': self.id,
-            'timestamp': self.timestamp,
-            'total_score': self.total_score,
-            'max_score': self.max_score,
-            'details': self.details
-        }
+class UserPermission(db.Model):
+    id = db.Column(db.Integer, primary_key=True)
+    user_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False)
+    category = db.Column(db.String(100), nullable=False)
+    
+    user = db.relationship('User', backref=db.backref('permissions', lazy=True))
