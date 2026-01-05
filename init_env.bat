@@ -3,7 +3,7 @@ chcp 65001 > nul
 setlocal
 
 echo ==========================================
-echo      Auto Grading System - Quick Setup
+echo      Auto Grading System - Environment Setup
 echo ==========================================
 
 :: 1. Check Python
@@ -83,53 +83,4 @@ echo.
 echo [5/5] Initializing Database...
 python -c "from web.app import app, db; app.app_context().push(); db.create_all(); print('Database initialized.')"
 
-:: 7. Menu
-:menu
-cls
-echo ==========================================
-echo      Auto Grading System - Launcher
-echo ==========================================
-echo 1. Run Web Interface (Browser)
-echo 2. Run CLI Mode (Command Line)
-echo 3. Rebuild C Core
-echo 4. Exit
-echo ==========================================
-set /p choice="Please select (1-4): "
-
-if "%choice%"=="1" goto run_web
-if "%choice%"=="2" goto run_cli
-if "%choice%"=="3" goto rebuild
-if "%choice%"=="4" goto end
-
-goto menu
-
-:run_web
-echo.
-echo Starting Web Server...
-echo Press Ctrl+C to stop.
-python web/app.py
-pause
-goto menu
-
-:run_cli
-echo.
-echo Starting CLI...
-if not exist build\auto_grader.exe (
-    echo [ERROR] Executable not found. Please build first.
-    pause
-    goto menu
-)
-build\auto_grader.exe
-pause
-goto menu
-
-:rebuild
-echo.
-echo Rebuilding...
-make clean
-make
-pause
-goto menu
-
-:end
 endlocal
