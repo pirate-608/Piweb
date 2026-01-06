@@ -17,6 +17,15 @@ if __name__ == "__main__":
     print(" * Press Ctrl+C to stop")
     print("=======================================================")
     
-    # threads=16: Number of threads to process requests
-    # Increased for better concurrency
-    serve(app, host='0.0.0.0', port=8080, threads=16)
+    # threads: Dynamic adjustment based on CPU
+    # For personal laptops, we balance concurrency with system responsiveness.
+    # IO-bound web threads can be higher than CPU cores, but we cap it to reasonable limits.
+    try:
+        import os
+        # Usually 2x logical cores is a good sweet spot for Waitress on Windows
+        thread_count = min(max(os.cpu_count() * 2, 8), 24)
+        print(f" * Threads Settings: {thread_count} worker threads allowed")
+    except:
+        thread_count = 16
+
+    serve(app, host='0.0.0.0', port=8080, threads=thread_count)

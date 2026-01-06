@@ -130,6 +130,55 @@ auto-grading-system/
     *   **自动同步**：每当您在 Web 端添加、修改或删除题目时，系统会自动将最新数据导出到 `questions.txt`。
     *   这意味着 CLI (命令行) 版的阅卷程序也能实时获取最新的题库数据。
 
+## 💻 运维与高级操作手册
+
+本章节介绍了如何手动管理项目服务，适合开发者或运维人员查阅。所有命令均建议在 VS Code 的 **PowerShell** 终端中执行。
+
+### 1. 一键维护命令
+
+| 操作目标 | 命令 | 说明 |
+| :--- | :--- | :--- |
+| **启动/重启 (公网)** | `Stop-Process -Name cloudflared, python -Force -ErrorAction SilentlyContinue; .\scripts\deploy_public.ps1` | **推荐**。自动清理旧进程并重新启动服务和隧道。 |
+| **启动 (本地开发)** | `.\scripts\deploy_local.ps1` | 启动交互式菜单，用于本地开发调试或运行 CLI 版。 |
+| **强制停止所有服务** | `Stop-Process -Name cloudflared, python -Force` | 立即终止服务器和隧道进程。 |
+
+### 2. 手动分步启动
+
+如果您不想使用脚本，可以手动分步启动及其组件：
+
+**步骤 A: 启动 Web 服务器 (Waitress)**
+```powershell
+# 1. 激活虚拟环境
+.\.venv\Scripts\Activate
+
+# 2. 设置 PYTHONPATH (防止 ModuleNotFoundError)
+$env:PYTHONPATH = "web"
+
+# 3. 启动生产服务器 (默认端口 8080)
+python web/wsgi.py
+```
+
+**步骤 B: 启动 Cloudflare Tunnel**
+保持 Web 服务器运行，新建一个终端窗口运行隧道：
+
+*   **方式 1 (Token 模式 - 推荐)**:
+    ```powershell
+    # 需确保根目录下有 verify_token.txt
+    .\cloudflared.exe tunnel run --token (Get-Content tunnel_token.txt)
+    ```
+*   **方式 2 (Name 模式 - 需本地登录)**:
+    ```powershell
+    # 需确保本地已配置名为 "Fishing-rod" 的隧道
+    .\cloudflared.exe tunnel run Fishing-rod
+    ```
+
+### 3. 性能调优说明
+
+为了在个人电脑上获得最佳并发性能，项目已进行以下配置：
+*   **动态并发**: `web/wsgi.py` 会根据您的 CPU 核心数自动调整工作线程 (策略: `CPU核数 * 2`，上限 24)。
+*   **内存保护**: `web/utils/queue_manager.py` 内置自动清理机制，定期移除陈旧的任务记录，防止内存溢出。
+*   **DB 优化**: 数据库已开启 SQLite WAL (Write-Ahead Logging) 模式，大幅提升并发读写吞吐量。
+
 ## 常见问题
 
 **Q: 为什么修改了题目，CLI 版没有变化？**

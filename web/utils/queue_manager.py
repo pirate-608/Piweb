@@ -21,6 +21,18 @@ class GradingQueue:
             print(f"[Queue] Started worker thread #{i+1}")
 
     def add_task(self, user_id, exam_data):
+        # Auto Cleanup: Prevent memory leak by removing old tasks
+        # If queue history exceeds 2000 items, remove the oldest 500
+        if len(self.tasks) > 2000:
+            try:
+                # Python 3.7+ preserves insertion order, so keys() are roughly chronological
+                old_keys = list(self.tasks.keys())[:500]
+                for k in old_keys:
+                    self.tasks.pop(k, None)
+                print(f"[Queue] Auto-cleaned {len(old_keys)} old tasks from memory.")
+            except Exception as e:
+                print(f"[Queue] Cleanup warning: {e}")
+
         task_id = str(uuid.uuid4())
         task_info = {
             'task_id': task_id,

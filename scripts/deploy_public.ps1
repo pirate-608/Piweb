@@ -28,10 +28,26 @@ if (Test-Path "cloudflared.exe") {
     Write-Host "[INFO] Found cloudflared.exe in project root." -ForegroundColor Green
     
     # Check if cloudflared is already running
-    if (Get-Process "cloudflared" -ErrorAction SilentlyContinue) {
-        Write-Host "[INFO] cloudflared is already running (Service or another instance)." -ForegroundColor Cyan
-        Write-Host "       Skipping tunnel start. Assuming 'Fishing-rod' or existing tunnel is active."
-    } else {
+    $existing = Get-Process "cloudflared" -ErrorAction SilentlyContinue
+    if ($existing) {
+        Write-Host "[WARN] cloudflared is already running (PID: $($existing.Id))." -ForegroundColor Yellow
+        Write-Host "       This might be a background service or a leftover process."
+        $kill = Read-Host "Do you want to stop it and start a new tunnel instance? (Y/N)"
+        
+        if ($kill -eq "Y" -or $kill -eq "y") {
+            Write-Host "[INFO] Stopping existing cloudflared..." -ForegroundColor Yellow
+            Stop-Process -InputObject $existing -Force -ErrorAction SilentlyContinue
+            # Try to uninstall service just in case it keeps restarting
+            Start-Process -FilePath ".\cloudflared.exe" -ArgumentList "service", "uninstall" -NoNewWindow -Wait -ErrorAction SilentlyContinue
+            Start-Time-Sleep -Seconds 2
+        } else {
+            Write-Host "[INFO] Keeping existing process running." -ForegroundColor Cyan
+            Write-Host "       Make sure it is connected to the right tunnel!"
+        }
+    }
+
+    # Re-check if it is still running (if user said N, or if kill failed, or if it wasn't running)
+    if (-not (Get-Process "cloudflared" -ErrorAction SilentlyContinue)) {
         Write-Host "[INFO] Starting Cloudflare Tunnel..." -ForegroundColor Green
         
         if (Test-Path "tunnel_token.txt") {

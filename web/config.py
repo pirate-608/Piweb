@@ -3,6 +3,13 @@ import sys
 import platform
 
 class Config:
+    # Grading Configuration
+    # Auto-detect reasonable worker count: CPU count * 2, max 16, min 4
+    try:
+        GRADING_WORKERS = min(max(os.cpu_count() * 2, 4), 16)
+    except:
+        GRADING_WORKERS = 4
+        
     # Determine library extension based on OS
     system_name = platform.system()
     if system_name == 'Windows':
