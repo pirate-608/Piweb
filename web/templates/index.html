@@ -51,6 +51,47 @@
 </div>
 {% endif %}
 
+{% if current_user.is_admin %}
+<div class="row mb-4">
+    <div class="col-12">
+        <div class="card border-warning">
+            <div class="card-header bg-warning text-dark d-flex justify-content-between align-items-center">
+                <span class="fw-bold">🚦 智能排队系统监控</span>
+                <button class="btn btn-sm btn-light" onclick="updateQueueStats()">刷新状态</button>
+            </div>
+            <div class="card-body">
+                <div class="row text-center">
+                    <div class="col-md-6 border-end">
+                        <h3 class="display-6 text-danger" id="queue-waiting">-</h3>
+                        <p class="text-muted mb-0">当前排队人数</p>
+                    </div>
+                    <div class="col-md-6">
+                        <h3 class="display-6 text-success" id="queue-active">-</h3>
+                        <p class="text-muted mb-0">正在评分任务</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+<script>
+function updateQueueStats() {
+    fetch('/admin/queue')
+        .then(r => r.json())
+        .then(data => {
+            if(data.error) return;
+            document.getElementById('queue-waiting').innerText = data.waiting_count;
+            document.getElementById('queue-active').innerText = data.active_tasks;
+        })
+        .catch(e => console.error(e));
+}
+document.addEventListener('DOMContentLoaded', () => {
+    updateQueueStats();
+    setInterval(updateQueueStats, 5000);
+});
+</script>
+{% endif %}
+
 {% if user_charts %}
 <div class="row mb-4">
     <div class="col-md-6">

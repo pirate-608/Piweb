@@ -45,10 +45,13 @@ auto-grading-system/
 │   ├── app.py            # Flask 主程序
 │   └── config.py         # 项目配置
 ├── Makefile              # 构建脚本
-├── init_env.bat          # 环境初始化脚本 (内部使用)
-├── deploy_local.bat      # 本地部署/开发脚本
-├── deploy_public.bat     # 公网部署/生产脚本
-├── wsgi.py               # 生产环境入口
+├── scripts/              # 部署脚本目录
+│   ├── init_env.bat      # 环境初始化脚本 (内部使用)
+│   ├── deploy_local.bat  # 本地部署/开发脚本
+│   └── deploy_public.bat # 公网部署/生产脚本
+├── web/
+│   ├── app.py            # Web 应用主程序
+│   └── wsgi.py           # 生产环境入口
 └── README.md             # 项目说明
 ```
 
@@ -56,7 +59,7 @@ auto-grading-system/
 
 ### 方式一：本地开发/测试 (Local)
 
-双击运行 **`deploy_local.bat`**。
+进入 `scripts` 目录，双击运行 **`deploy_local.bat`** (会自动调用 PowerShell 版本的脚本)。
 该脚本会自动完成环境初始化，并提供以下菜单：
 1.  **Run Web Interface (Dev Mode)**: 启动开发版 Web 服务。
 2.  **Run CLI Mode**: 启动命令行版阅卷系统。
@@ -64,18 +67,41 @@ auto-grading-system/
 
 ### 方式二：公网部署 (Public / Production)
 
-双击运行 **`deploy_public.bat`**。
+进入 `scripts` 目录，双击运行 **`deploy_public.bat`** (会自动调用 PowerShell 版本的脚本)。
 该脚本会自动安装生产级服务器 (Waitress) 并启动服务 (端口 8080)。
 
-**如何让外网访问？ (推荐 Cloudflare Tunnel)**
+**🌐 如何配置 Cloudflare Tunnel (外网访问)**
 
-1.  保持 `deploy_public.bat` 运行。
-2.  下载 Windows 版 [cloudflared](https://github.com/cloudflare/cloudflared/releases)。
-3.  在终端运行：
-    ```powershell
-    .\cloudflared.exe tunnel --url http://localhost:8080
-    ```
-4.  复制终端显示的 `https://xxxx.trycloudflare.com` 链接即可访问。
+为了获得稳定的公网访问地址（自定义域名），建议使用 **Token 认证模式**，而不是临时的 Quick Tunnel。
+
+1.  **准备环境**:
+    *   下载 Windows 版 [cloudflared.exe](https://github.com/cloudflare/cloudflared/releases)。
+    *   将 `cloudflared.exe` 放入项目根目录 (`auto-grading-system/`)。
+
+2.  **配置隧道 (推荐 - Token 模式)**:
+    *   登录 [Cloudflare Zero Trust Dashboard](https://one.dash.cloudflare.com/)。
+    *   转到 **Networks > Tunnels**，点击 **Create a tunnel**。
+    *   选择 **Cloudflared** 连接器类型。
+    *   给隧道起个名字 (例如 `my-grading-system`) 并保存。
+    *   在 "Install and run a connector" 页面，你会看到一段安装命令。**复制其中 `--token` 后面的那串长字符** (或者复制整个命令，提取 token 部分)。
+    *   在项目根目录下创建一个名为 **`tunnel_token.txt`** 的文件。
+    *   将刚刚复制的 token **粘贴**进去 (文件中只保留这一行 token 字符串)。
+    *   在 Cloudflare Dashboard 中继续点击 **Next**，配置 **Public Hostname**：
+        *   Domain: 选择你的域名 (例如 `67656.fun`)。
+        *   Subdomain: (可选，例如 `exam`)。
+        *   Service: `HTTP` : `localhost:8080`。
+
+3.  **启动服务**:
+    *   运行 `deploy_public.bat`。
+    *   脚本会自动检测 `tunnel_token.txt` 并启动正式隧道。
+    *   现在你可以通过你配置的域名 (例如 `https://exam.67656.fun`) 访问系统了。
+
+4.  **备用方案 (本地已登录)**:
+    *   如果你已经在本地通过 `cloudflared login` 登录过。
+    *   可以在 **`tunnel_name.txt`** 文件中填入你的隧道名称 (例如 `Fishing-rod`)。
+    *   脚本也会优先读取该配置。
+
+*注意：如果没有任何配置文件，脚本会询问是否开启临时的随机域名隧道（`trycloudflare.com`），但这不适合正式使用。*
 
 ## 用户指南 (Web 版)
 

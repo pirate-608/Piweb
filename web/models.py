@@ -3,8 +3,18 @@ from flask_login import UserMixin
 from werkzeug.security import generate_password_hash, check_password_hash
 from datetime import datetime
 import json
+from sqlalchemy import event
+from sqlalchemy.engine import Engine
 
 db = SQLAlchemy()
+
+# Enable Write-Ahead Logging (WAL) mode for SQLite
+# This significantly improves concurrency by allowing simultaneous readers and writers
+@event.listens_for(Engine, "connect")
+def set_sqlite_pragma(dbapi_connection, connection_record):
+    cursor = dbapi_connection.cursor()
+    cursor.execute("PRAGMA journal_mode=WAL")
+    cursor.close()
 
 class User(UserMixin, db.Model):
     id = db.Column(db.Integer, primary_key=True)

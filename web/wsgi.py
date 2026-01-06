@@ -1,10 +1,9 @@
 import os
 import sys
 
-# Add the 'web' directory to sys.path
-# This ensures that imports inside app.py (like 'from config import Config') work correctly
-web_dir = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'web')
-sys.path.insert(0, web_dir)
+# Since this file is now in the 'web' directory, and we run it as a script,
+# the 'web' directory is automatically added to sys.path.
+# We can import app directly.
 
 from app import app
 
@@ -18,5 +17,6 @@ if __name__ == "__main__":
     print(" * Press Ctrl+C to stop")
     print("=======================================================")
     
-    # threads=4: Number of threads to process requests
-    serve(app, host='0.0.0.0', port=8080, threads=4)
+    # threads=16: Number of threads to process requests
+    # Increased for better concurrency
+    serve(app, host='0.0.0.0', port=8080, threads=16)

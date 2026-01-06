@@ -67,6 +67,15 @@ class Config:
     SESSION_COOKIE_HTTPONLY = True
     SESSION_COOKIE_SAMESITE = 'Lax'
     # SESSION_COOKIE_SECURE = True # Uncomment if running over HTTPS
+    
+    # Trusted Origins for CSRF (Add your custom domains here)
+    WTF_CSRF_TRUSTED_ORIGINS = [
+        'http://localhost:8080', 
+        'http://127.0.0.1:8080', 
+        'https://*.trycloudflare.com',
+        'http://67656.fun',
+        'https://67656.fun'
+    ]
 
     SQLALCHEMY_TRACK_MODIFICATIONS = False
     ALLOWED_EXTENSIONS = {'png', 'jpg', 'jpeg', 'gif', 'webp', 'svg', 'bmp', 'tiff'}
@@ -74,4 +83,10 @@ class Config:
 
     # Exam Settings
     EXAM_DURATION_MINUTES = 60  # 考试时长（分钟）
+    
+    # Grading Queue Config
+    # 建议范围：CPU核心数 ~ 2倍CPU核心数
+    # 对于 I/O 密集型（数据库读写多），可以设大一点；对于 CPU 密集型（计算多），设为核心数即可。
+    # 默认自动设置为 CPU 核心数，最小为 2
+    GRADING_WORKERS = max(2, os.cpu_count() or 4)
 

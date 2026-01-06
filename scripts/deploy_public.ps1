@@ -1,0 +1,75 @@
+# scripts/deploy_public.ps1
+$ErrorActionPreference = "Continue" # Don't stop on minor errors like pip warning
+$ScriptDir = Split-Path -Parent $MyInvocation.MyCommand.Path
+Set-Location -Path "$ScriptDir\.."
+
+# Run init_env
+try {
+    & "$ScriptDir\init_env.ps1"
+} catch {
+    Write-Host "[ERROR] Environment setup failed." -ForegroundColor Red
+    Pause
+    exit 1
+}
+
+# Activate venv
+$env:VIRTUAL_ENV = "$PWD\.venv"
+$env:Path = "$PWD\.venv\Scripts;$env:Path"
+
+Write-Host "`n==========================================" -ForegroundColor Cyan
+Write-Host "     Auto Grading System - Public Deploy" -ForegroundColor Cyan
+Write-Host "==========================================" -ForegroundColor Cyan
+
+Write-Host "`n[INFO] Installing production server (waitress)..." -ForegroundColor Yellow
+pip install waitress > $null 2>&1
+
+Write-Host ""
+if (Test-Path "cloudflared.exe") {
+    Write-Host "[INFO] Found cloudflared.exe in project root." -ForegroundColor Green
+    
+    # Check if cloudflared is already running
+    if (Get-Process "cloudflared" -ErrorAction SilentlyContinue) {
+        Write-Host "[INFO] cloudflared is already running (Service or another instance)." -ForegroundColor Cyan
+        Write-Host "       Skipping tunnel start. Assuming 'Fishing-rod' or existing tunnel is active."
+    } else {
+        Write-Host "[INFO] Starting Cloudflare Tunnel..." -ForegroundColor Green
+        
+        if (Test-Path "tunnel_token.txt") {
+            Write-Host "[INFO] Found tunnel_token.txt, starting custom domain tunnel..." -ForegroundColor Green
+            $token = Get-Content "tunnel_token.txt" -Raw
+            $token = $token.Trim()
+            Start-Process -FilePath ".\cloudflared.exe" -ArgumentList "tunnel", "run", "--token", "$token" -NoNewWindow:$false
+        } elseif (Test-Path "tunnel_name.txt") {
+             # Support running by name if configured locally
+            $name = Get-Content "tunnel_name.txt" -Raw
+            $name = $name.Trim()
+            Write-Host "[INFO] Found tunnel_name.txt, starting tunnel named '$name'..." -ForegroundColor Green
+            Start-Process -FilePath ".\cloudflared.exe" -ArgumentList "tunnel", "run", "$name" -NoNewWindow:$false
+        } else {
+            Write-Host "[INFO] No Tunnel configuration found." -ForegroundColor Yellow
+            Write-Host "       To use your custom domain (Recommended):"
+            Write-Host "       1. Create a tunnel in Cloudflare Zero Trust Dashboard."
+            Write-Host "       2. Save the token to 'tunnel_token.txt'."
+            Write-Host ""
+            
+            $yn = Read-Host "Do you want to start a temporary Quick Tunnel with a random URL? (Y/N)"
+            if ($yn -eq "Y" -or $yn -eq "y") {
+                Start-Process -FilePath ".\cloudflared.exe" -ArgumentList "tunnel", "--url", "http://localhost:8080" -NoNewWindow:$false
+                Write-Host "[INFO] Cloudflare Tunnel started in a new window." -ForegroundColor Green
+            } else {
+                Write-Host "[INFO] Skipping tunnel start. Web server will run locally only." -ForegroundColor Cyan
+            }
+        }
+    }
+} else {
+    Write-Host "[TIP] cloudflared.exe not found in project root." -ForegroundColor Yellow
+    Write-Host "      To enable public access, download cloudflared.exe to this folder."
+}
+
+Write-Host "`n[INFO] Starting Production Server (Waitress)..." -ForegroundColor Green
+Write-Host "[INFO] Serving on http://0.0.0.0:8080" -ForegroundColor Green
+Write-Host "[INFO] Press Ctrl+C to stop."
+
+$env:PYTHONPATH = "web"
+python web\wsgi.py
+Pause

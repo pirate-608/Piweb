@@ -14,6 +14,7 @@ from flask_login import LoginManager, login_user, logout_user, login_required, c
 from flask_wtf.csrf import CSRFProtect
 from config import Config
 from utils.data_manager import DataManager
+from utils.queue_manager import GradingQueue
 from models import db, User
 
 if getattr(sys, 'frozen', False):
@@ -124,6 +125,11 @@ try:
 except Exception as e:
     print(f"Error loading DLL: {e}")
     lib = None
+
+# Initialize Grading Queue
+# Use configured number of workers (default to 4 if not set)
+num_workers = getattr(Config, 'GRADING_WORKERS', 4)
+grading_queue = GradingQueue(app, data_manager, lib, num_workers=num_workers)
 
 @app.route('/uploads/<filename>')
 def uploaded_file(filename):
@@ -366,77 +372,25 @@ def exam():
              # Fallback if session lost
              return redirect(url_for('index'))
              
-        total_score = 0
-        results = []
-        
-        # 遍历提交的答案 (q_0, q_1, ...)
+        # Collect answers for queue
+        user_answers = {}
         for i, q_id in enumerate(ids):
-            # Find question by ID
-            q = next((item for item in all_questions if item['id'] == q_id), None)
-            if not q: continue
-            
-            user_ans = request.form.get(f'q_{i}', '')
-            
-            # Support multiple valid answers separated by ; or ；
-            valid_answers = q['answer'].replace('；', ';').split(';')
-            valid_answers = [ans.strip() for ans in valid_answers if ans.strip()]
-            if not valid_answers:
-                valid_answers = [q['answer']] # Fallback if split results in empty
-
-            score = 0
-            # Check against all valid answers and take the max score
-            for correct_ans in valid_answers:
-                current_score = 0
-                # Use C function for grading if available
-                if lib:
-                    try:
-                        b_user = user_ans.encode('gbk')
-                        b_correct = correct_ans.encode('gbk')
-                    except:
-                        b_user = user_ans.encode('utf-8')
-                        b_correct = correct_ans.encode('utf-8')
-                        
-                    current_score = lib.calculate_score(b_user, b_correct, q['score'])
-                else:
-                    # Fallback python implementation
-                    current_score = q['score'] if user_ans.strip().lower() == correct_ans.strip().lower() else 0
-                
-                if current_score > score:
-                    score = current_score
-            
-            total_score += score
-            results.append({
-                'id': q['id'],
-                'category': q.get('category', '默认题集'),
-                'question': q['content'],
-                'user_ans': user_ans,
-                'correct_ans': q['answer'], # Show original full answer string
-                'score': score,
-                'full_score': q['score']
-            })
+             user_answers[str(i)] = request.form.get(f'q_{i}', '')
         
-        # Update user stats and permissions
-        data_manager.update_user_stats(current_user.id, results)
-
-        # Save result to history
-        # Calculate max score based on the questions in this exam
-        exam_questions = [q for q in all_questions if q['id'] in ids]
-        max_score = sum(q['score'] for q in exam_questions)
-        
-        exam_record = {
-            'id': str(uuid.uuid4()),
-            'timestamp': datetime.now().strftime('%Y-%m-%d %H:%M:%S'),
-            'total_score': total_score,
-            'max_score': max_score,
-            'details': results
+        exam_data = {
+            'ids': ids,
+            'user_answers': user_answers,
+            'all_questions': all_questions
         }
         
-        data_manager.save_exam_result(exam_record, user_id=current_user.id)
+        # Add to queue
+        task_id = grading_queue.add_task(current_user.id, exam_data)
 
         # 考试结束，清除会话状态
         session.pop('in_exam', None)
         session.pop('exam_ids', None)
-        return render_template('result.html', total_score=total_score, results=results)
+        
+        return redirect(url_for('waiting', task_id=task_id))
     
     return redirect(url_for('index'))
 
@@ -502,6 +456,26 @@ def delete_history(result_id):
     data_manager.delete_result(result_id)
     flash('记录已删除', 'success')
     return redirect(url_for('history'))
+
+@app.route('/waiting/<task_id>')
+@login_required
+def waiting(task_id):
+    return render_template('waiting.html', task_id=task_id)
+
+@app.route('/queue/status/<task_id>')
+@login_required
+def queue_status(task_id):
+    status = grading_queue.get_status(task_id)
+    if not status:
+        return {'status': 'error', 'error': 'Task not found'}, 404
+    return status
+
+@app.route('/admin/queue')
+@login_required
+def admin_queue():
+    if not current_user.is_admin:
+        return {'error': 'Unauthorized'}, 403
+    return grading_queue.get_queue_stats()
 
 @app.route('/history/view/<result_id>')
 @login_required
