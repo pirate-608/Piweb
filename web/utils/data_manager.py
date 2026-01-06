@@ -32,6 +32,20 @@ class DataManager:
         with app.app_context():
             db.create_all()
             
+            # Schema Migration: Check for email column in user table
+            try:
+                from sqlalchemy import inspect, text
+                inspector = inspect(db.engine)
+                if 'user' in inspector.get_table_names():
+                    columns = [c['name'] for c in inspector.get_columns('user')]
+                    if 'email' not in columns:
+                        print("Migrating schema: Adding email column to user table")
+                        with db.engine.connect() as conn:
+                            conn.execute(text("ALTER TABLE user ADD COLUMN email VARCHAR(120)"))
+                            # SQLite usually auto-commits DDL, but explicit commit doesn't hurt or might be needed depending on driver
+            except Exception as e:
+                print(f"Schema migration error (email column): {e}")
+
             # Performance Optimization: Ensure index exists on category
             try:
                 from sqlalchemy import text

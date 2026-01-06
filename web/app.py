@@ -15,7 +15,7 @@ from flask_wtf.csrf import CSRFProtect
 from config import Config
 from utils.data_manager import DataManager
 from utils.queue_manager import GradingQueue
-from models import db, User
+from models import db, User, SystemSetting, UserCategoryStat
 
 if getattr(sys, 'frozen', False):
     # Determine base directory for resources
@@ -135,15 +135,159 @@ grading_queue = GradingQueue(app, data_manager, lib, num_workers=num_workers)
 def uploaded_file(filename):
     return send_from_directory(app.config['UPLOAD_FOLDER'], filename)
 
+@app.route('/admin/users')
+@login_required
+def admin_users():
+    if not current_user.is_admin:
+        flash('您没有权限访问此页面', 'danger')
+        return redirect(url_for('index'))
+    
+    users = User.query.all()
+    user_list = []
+    
+    for u in users:
+        permissions = [p.category for p in u.permissions]
+        user_list.append({
+            'id': u.id,
+            'username': u.username,
+            'is_admin': u.is_admin,
+            'permissions': permissions
+        })
+        
+    return render_template('admin_users.html', users=user_list)
+
+@app.route('/admin/user/<int:user_id>')
+@login_required
+def admin_user_detail(user_id):
+    if not current_user.is_admin:
+        flash('您没有权限访问此页面', 'danger')
+        return redirect(url_for('index'))
+    
+    user = User.query.get_or_404(user_id)
+    
+    # 1. Calculate Rank
+    leaderboard = data_manager.get_leaderboard_data()
+    rank = '未上榜'
+    for i, user_stat in enumerate(leaderboard['global']):
+        if user_stat['username'] == user.username:
+            rank = i + 1
+            break
+            
+    # 2. Permissions
+    permissions = [p.category for p in user.permissions]
+    
+    # 3. Overall Stats
+    stats_query = UserCategoryStat.query.filter_by(user_id=user.id).all()
+    total_exams = sum(s.total_attempts for s in stats_query)
+    total_score = sum(s.total_score for s in stats_query)
+    
+    # Average Score per Exam
+    avg_score = (total_score / total_exams) if total_exams > 0 else 0
+    
+    overall_stats = {
+        'total_exams': total_exams,
+        'avg_score': avg_score
+    }
+    
+    return render_template('admin_user_detail.html', 
+                         user=user, 
+                         rank=rank, 
+                         permissions=permissions, 
+                         overall_stats=overall_stats)
+
 @app.route('/')
 def index():
+    # Ensure table exists (lazy migration for SystemSetting)
+    # db.create_all() is usually called at app startup but for new models we might want this or rely on restart
+    # In this environment, restarting the server is hard because of the terminal lock, 
+    # but the previous turn said "Server is currently running". 
+    # If I just added the model, the table might not exist in the DB yet unless I create it.
+    # To be safe, I'll attempt a lazy create if it fails, or just rely on manual restart if needed.
+    # Actually, let's just do standard query.
+    
     stats = data_manager.get_system_stats()
     
     user_charts = None
+    user_stats = None
     if current_user.is_authenticated:
         user_charts = data_manager.get_user_dashboard_stats(current_user.id)
         
-    return render_template('index.html', stats=stats, user_charts=user_charts)
+        # Calculate Personal Stats for the cards
+        ug_stats_query = UserCategoryStat.query.filter_by(user_id=current_user.id).all()
+        ug_total_exams = sum(s.total_attempts for s in ug_stats_query)
+        ug_total_score = sum(s.total_score for s in ug_stats_query)
+        ug_avg = round((ug_total_score / ug_total_exams), 1) if ug_total_exams > 0 else 0
+        
+        user_stats = {
+            'total_exams': ug_total_exams,
+            'avg_score': ug_avg
+        }
+    
+    # Get user guide and announcement
+    try:
+        guide_setting = SystemSetting.query.filter_by(key='user_guide').first()
+        user_guide = guide_setting.value if guide_setting else None
+        
+        announcement_setting = SystemSetting.query.filter_by(key='announcement').first()
+        announcement = announcement_setting.value if announcement_setting else None
+    except:
+        user_guide = None
+        announcement = None
+        
+    return render_template('index.html', stats=stats, user_charts=user_charts, 
+                         user_stats=user_stats, 
+                         user_guide=user_guide, announcement=announcement)
+
+@app.route('/admin/guide/update', methods=['POST'])
+@login_required
+def update_guide():
+    if not current_user.is_admin:
+        flash('只有管理员可以编辑用户指南', 'danger')
+        return redirect(url_for('index'))
+        
+    content = request.form.get('content')
+    
+    # Lazy creation of table if it doesn't exist (simpler for this context)
+    try:
+        guide_setting = SystemSetting.query.filter_by(key='user_guide').first()
+    except:
+        db.create_all()
+        guide_setting = None
+
+    if not guide_setting:
+        guide_setting = SystemSetting(key='user_guide', value=content)
+        db.session.add(guide_setting)
+    else:
+        guide_setting.value = content
+        
+    db.session.commit()
+    flash('用户指南已更新', 'success')
+    return redirect(url_for('index'))
+
+@app.route('/admin/announcement/update', methods=['POST'])
+@login_required
+def update_announcement():
+    if not current_user.is_admin:
+        flash('只有管理员可以编辑公告', 'danger')
+        return redirect(url_for('index'))
+        
+    content = request.form.get('content')
+    
+    try:
+        announcement_setting = SystemSetting.query.filter_by(key='announcement').first()
+    except:
+        db.create_all()
+        announcement_setting = None
+
+    if not announcement_setting:
+        announcement_setting = SystemSetting(key='announcement', value=content)
+        db.session.add(announcement_setting)
+    else:
+        announcement_setting.value = content
+        
+    db.session.commit()
+    flash('系统公告已更新', 'success')
+    return redirect(url_for('index'))
 
 @app.route('/login', methods=['GET', 'POST'])
 def login():
@@ -151,9 +295,11 @@ def login():
         return redirect(url_for('index'))
     
     if request.method == 'POST':
-        username = request.form.get('username')
+        login_id = request.form.get('username') # Form field is still named username
         password = request.form.get('password')
-        user = User.query.filter_by(username=username).first()
+        
+        # Try finding by username first, then email
+        user = User.query.filter((User.username == login_id) | (User.email == login_id)).first()
         
         if user and user.check_password(password):
             login_user(user)
@@ -163,6 +309,77 @@ def login():
             flash('用户名或密码错误', 'danger')
             
     return render_template('login.html')
+
+@app.route('/profile', methods=['GET', 'POST'])
+@login_required
+def profile():
+    if request.method == 'POST':
+        current_password = request.form.get('current_password')
+        
+        if not current_user.check_password(current_password):
+            flash('当前密码错误，验证失败', 'danger')
+            return redirect(url_for('profile'))
+            
+        username = request.form.get('username')
+        email = request.form.get('email')
+        new_password = request.form.get('new_password')
+        confirm_password = request.form.get('confirm_password')
+        
+        # Check username uniqueness if changed
+        if username and username != current_user.username:
+            if User.query.filter_by(username=username).first():
+                flash('该用户名已被占用', 'danger')
+                return redirect(url_for('profile'))
+            current_user.username = username
+            
+        # Update email
+        current_user.email = email if email else None
+        
+        # Update password
+        if new_password:
+            if new_password != confirm_password:
+                flash('两次输入的新密码不一致', 'danger')
+                return redirect(url_for('profile'))
+            current_user.set_password(new_password)
+            
+        try:
+            db.session.commit()
+            flash('个人资料修改成功', 'success')
+        except Exception as e:
+            db.session.rollback()
+            flash(f'修改失败: {str(e)}', 'danger')
+            
+        return redirect(url_for('profile'))
+
+    # GET request - Display Profile
+    
+    # 1. Calculate Rank
+    leaderboard = data_manager.get_leaderboard_data()
+    rank = '未上榜'
+    for i, user_stat in enumerate(leaderboard['global']):
+        if user_stat['username'] == current_user.username:
+            rank = i + 1
+            break
+            
+    # 2. Permissions
+    permissions = [p.category for p in current_user.permissions]
+    
+    # 3. Overall Stats
+    stats_query = UserCategoryStat.query.filter_by(user_id=current_user.id).all()
+    total_exams = sum(s.total_attempts for s in stats_query)
+    total_score = sum(s.total_score for s in stats_query)
+    # Average Score per Exam
+    avg_score = (total_score / total_exams) if total_exams > 0 else 0
+    
+    overall_stats = {
+        'total_exams': total_exams,
+        'avg_score': avg_score
+    }
+    
+    return render_template('profile.html', 
+                         rank=rank, 
+                         permissions=permissions, 
+                         overall_stats=overall_stats)
 
 @app.route('/register', methods=['GET', 'POST'])
 def register():

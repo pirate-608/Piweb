@@ -11,8 +11,9 @@
                 <form method="POST">
                     <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
                     <div class="mb-3">
-                        <label for="username" class="form-label">用户名</label>
-                        <input type="text" class="form-control" id="username" name="username" required>
+                        <label for="username" class="form-label">用户名 或 邮箱</label>
+                        <input type="text" class="form-control" id="username" name="username" placeholder="请输入用户名或注册邮箱" required>
+                        <div class="form-text text-muted">首次使用请先注册。初次注册时仅支持用户名，邮箱可在登录后绑定。</div>
                     </div>
                     <div class="mb-3">
                         <label for="password" class="form-label">密码</label>

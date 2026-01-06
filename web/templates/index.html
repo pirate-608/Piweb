@@ -19,6 +19,96 @@
     </div>
 </div>
 
+<!-- Announcements Section -->
+{% if announcement or current_user.is_admin %}
+<div class="row mb-4">
+    <div class="col-12">
+        <div class="card shadow-sm border-info">
+            <div class="card-header bg-info text-white d-flex justify-content-between align-items-center">
+                <h5 class="my-0"><i class="bi bi-megaphone"></i> 系统公告</h5>
+                {% if current_user.is_admin %}
+                <button class="btn btn-sm btn-light text-info" type="button" data-bs-toggle="collapse" data-bs-target="#editAnnouncementForm" aria-expanded="false" aria-controls="editAnnouncementForm">
+                    ✏️ 编辑公告
+                </button>
+                {% endif %}
+            </div>
+            
+            {% if current_user.is_admin %}
+            <div class="collapse" id="editAnnouncementForm">
+                <div class="card-body border-bottom bg-light">
+                    <form action="{{ url_for('update_announcement') }}" method="post">
+                        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
+                        <div class="mb-3">
+                            <label for="announcementContent" class="form-label">公告内容 (支持 HTML)</label>
+                            <textarea class="form-control" id="announcementContent" name="content" rows="4">{{ announcement or '' }}</textarea>
+                            <div class="form-text">清空内容并保存即可隐藏公告栏。通常支持 HTML 标签用于排版。</div>
+                        </div>
+                        <button type="submit" class="btn btn-primary btn-sm">保存公告</button>
+                    </form>
+                </div>
+            </div>
+            {% endif %}
+            
+            {% if announcement %}
+            <div class="card-body">
+                <div class="announcement-content">
+                    {{ announcement|safe }}
+                </div>
+            </div>
+            {% elif current_user.is_admin %}
+            <div class="card-body text-center text-muted py-2">
+                <small>暂无公告，点击右上角编辑按钮发布新公告。</small>
+            </div>
+            {% endif %}
+        </div>
+    </div>
+</div>
+{% endif %}
+
+<!-- User Guide Section -->
+<div class="row mb-4">
+    <div class="col-12">
+        <div class="card shadow-sm">
+            <div class="card-header d-flex justify-content-between align-items-center">
+                <h4 class="my-0 fw-normal">📖 用户指南</h4>
+                {% if current_user.is_admin %}
+                <button class="btn btn-sm btn-outline-primary" type="button" data-bs-toggle="collapse" data-bs-target="#editGuideForm" aria-expanded="false" aria-controls="editGuideForm">
+                    ✏️ 编辑指南
+                </button>
+                {% endif %}
+            </div>
+            
+            {% if current_user.is_admin %}
+            <div class="collapse" id="editGuideForm">
+                <div class="card-body border-bottom bg-light">
+                    <form action="{{ url_for('update_guide') }}" method="post">
+                        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
+                        <div class="mb-3">
+                            <label for="guideContent" class="form-label">指南内容 (支持 HTML)</label>
+                            <textarea class="form-control" id="guideContent" name="content" rows="10">{{ user_guide or '' }}</textarea>
+                            <div class="form-text">您可以直接编写 HTML 代码来排版指南内容。</div>
+                        </div>
+                        <button type="submit" class="btn btn-primary">保存更新</button>
+                    </form>
+                </div>
+            </div>
+            {% endif %}
+            
+            {% if user_guide %}
+            <div class="card-body">
+                <div class="user-guide-content">
+                    {{ user_guide|safe }}
+                </div>
+            </div>
+            {% elif current_user.is_admin %}
+            <div class="card-body text-center text-muted py-4">
+                <p class="mb-0">暂无用户指南，请点击"编辑指南"按钮进行添加。</p>
+            </div>
+            {% endif %}
+        </div>
+    </div>
+</div>
+
 {% if stats %}
 <div class="row mb-4">
     <div class="col-md-4">
@@ -26,26 +116,42 @@
             <div class="card-header">题库总量</div>
             <div class="card-body">
                 <h1 class="card-title display-4">{{ stats.total_questions }}</h1>
-                <p class="card-text">道题目</p>
+                <p class="card-text">道公开题目</p>
             </div>
         </div>
     </div>
     <div class="col-md-4">
         <div class="card text-white bg-success mb-3 h-100">
-            <div class="card-header">考试总次数</div>
-            <div class="card-body">
-                <h1 class="card-title display-4">{{ stats.total_exams }}</h1>
-                <p class="card-text">次记录</p>
-            </div>
+            {% if current_user.is_authenticated and user_stats %}
+                <div class="card-header">我的考试</div>
+                <div class="card-body">
+                    <h1 class="card-title display-4">{{ user_stats.total_exams }}</h1>
+                    <p class="card-text">次个人记录</p>
+                </div>
+            {% else %}
+                <div class="card-header">全站考试</div>
+                <div class="card-body">
+                    <h1 class="card-title display-4">{{ stats.total_exams }}</h1>
+                    <p class="card-text">次累计记录</p>
+                </div>
+            {% endif %}
         </div>
     </div>
     <div class="col-md-4">
         <div class="card text-white bg-info mb-3 h-100">
-            <div class="card-header">平均得分</div>
-            <div class="card-body">
-                <h1 class="card-title display-4">{{ stats.avg_score }}</h1>
-                <p class="card-text">分</p>
-            </div>
+            {% if current_user.is_authenticated and user_stats %}
+                <div class="card-header">我的均分</div>
+                <div class="card-body">
+                    <h1 class="card-title display-4">{{ user_stats.avg_score }}</h1>
+                    <p class="card-text">分</p>
+                </div>
+            {% else %}
+                <div class="card-header">全站均分</div>
+                <div class="card-body">
+                    <h1 class="card-title display-4">{{ stats.avg_score }}</h1>
+                    <p class="card-text">分 (所有用户)</p>
+                </div>
+            {% endif %}
         </div>
     </div>
 </div>

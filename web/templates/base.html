@@ -7,7 +7,7 @@
     <link href="{{ url_for('static', filename='css/bootstrap.min.css') }}" rel="stylesheet">
     <style>
         body { padding-top: 20px; }
-        .container { max-width: 800px; }
+        /* .container { max-width: 800px; } Removed to allow responsive full width */
     </style>
 </head>
 <body>
@@ -44,6 +44,9 @@
                                 <li class="nav-item">
                                     <a class="nav-link" href="/manage">管理题目</a>
                                 </li>
+                                <li class="nav-item">
+                                    <a class="nav-link" href="/admin/users">用户管理</a>
+                                </li>
                                 {% endif %}
                             {% endif %}
                         {% else %}
@@ -55,10 +58,10 @@
                     <ul class="navbar-nav ms-auto">
                         {% if current_user.is_authenticated %}
                             <li class="nav-item">
-                                <span class="nav-link text-muted">
+                                <a class="nav-link" href="{{ url_for('profile') }}">
                                     👤 {{ current_user.username }}
                                     {% if current_user.is_admin %}<span class="badge bg-danger">管理员</span>{% endif %}
-                                </span>
+                                </a>
                             </li>
                             <li class="nav-item">
                                 <a class="nav-link" href="{{ url_for('logout') }}">退出</a>

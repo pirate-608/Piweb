@@ -115,6 +115,9 @@ class GradingQueue:
                         'details': result['details']
                     }
                     self.data_manager.save_exam_result(exam_record, user_id=task['user_id'])
+                    
+                    # Update User Stats for Leaderboard
+                    self.data_manager.update_user_stats(task['user_id'], result['details'])
                 
                 # Update task
                 task['result'] = result

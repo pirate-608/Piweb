@@ -19,6 +19,7 @@ def set_sqlite_pragma(dbapi_connection, connection_record):
 class User(UserMixin, db.Model):
     id = db.Column(db.Integer, primary_key=True)
     username = db.Column(db.String(80), unique=True, nullable=False)
+    email = db.Column(db.String(120), unique=True, nullable=True)
     password_hash = db.Column(db.String(128))
     is_admin = db.Column(db.Boolean, default=False)
     
@@ -91,3 +92,7 @@ class UserPermission(db.Model):
     category = db.Column(db.String(100), nullable=False)
     
     user = db.relationship('User', backref=db.backref('permissions', lazy=True))
+
+class SystemSetting(db.Model):
+    key = db.Column(db.String(50), primary_key=True)
+    value = db.Column(db.Text, nullable=True)

@@ -1,0 +1,60 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="row">
+    <div class="col-md-12">
+        <h2 class="mb-4">👤 用户管理</h2>
+        
+        <div class="card shadow-sm">
+            <div class="card-body">
+                <div class="table-responsive">
+                    <table class="table table-hover align-middle">
+                        <thead class="table-light">
+                            <tr>
+                                <th>ID</th>
+                                <th>用户名</th>
+                                <th>角色</th>
+                                <th>题目访问权限</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for user in users %}
+                            <tr>
+                                <td>{{ user.id }}</td>
+                                <td>
+                                    <strong><a href="{{ url_for('admin_user_detail', user_id=user.id) }}" class="text-decoration-none">{{ user.username }}</a></strong>
+                                </td>
+                                <td>
+                                    {% if user.is_admin %}
+                                        <span class="badge bg-danger">管理员</span>
+                                    {% else %}
+                                        <span class="badge bg-secondary">普通用户</span>
+                                    {% endif %}
+                                </td>
+                                <td>
+                                    {% if user.is_admin %}
+                                        <span class="badge bg-success">全部权限 (Admin)</span>
+                                    {% else %}
+                                        {% if user.permissions %}
+                                            {% for perm in user.permissions %}
+                                                <span class="badge bg-info text-dark">{{ perm }}</span>
+                                            {% endfor %}
+                                        {% else %}
+                                            <span class="text-muted small">无特殊权限</span>
+                                        {% endif %}
+                                    {% endif %}
+                                </td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+        
+        <div class="mt-3">
+            <a href="/" class="btn btn-secondary">返回首页</a>
+        </div>
+    </div>
+</div>
+{% endblock %}

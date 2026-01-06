@@ -1,0 +1,102 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="row justify-content-center">
+    <div class="col-md-8">
+        <div class="card shadow-sm mb-4">
+            <div class="card-header bg-primary text-white">
+                <h4 class="mb-0"><i class="bi bi-person-circle"></i> 个人资料</h4>
+            </div>
+            <div class="card-body">
+                {% with messages = get_flashed_messages(with_categories=true) %}
+                    {% if messages %}
+                        {% for category, message in messages %}
+                            <div class="alert alert-{{ category }}">{{ message }}</div>
+                        {% endfor %}
+                    {% endif %}
+                {% endwith %}
+
+                <div class="row mb-4">
+                    <div class="col-md-4 text-center mb-3">
+                        <div class="display-1 text-primary"><i class="bi bi-person-bounding-box"></i></div>
+                        <h3 class="mt-2">{{ current_user.username }}</h3>
+                        <span class="badge bg-{{ 'danger' if current_user.is_admin else 'success' }}">
+                            {{ '管理员' if current_user.is_admin else '普通用户' }}
+                        </span>
+                    </div>
+                    <div class="col-md-8">
+                        <h5 class="border-bottom pb-2 mb-3">基本统计</h5>
+                        <div class="row text-center">
+                            <div class="col-4">
+                                <div class="p-2 border rounded bg-light">
+                                    <h3 class="text-primary">{{ overall_stats.total_exams }}</h3>
+                                    <small class="text-muted">考试次数</small>
+                                </div>
+                            </div>
+                            <div class="col-4">
+                                <div class="p-2 border rounded bg-light">
+                                    <h3 class="text-success">{{ overall_stats.avg_score|round(1) }}</h3>
+                                    <small class="text-muted">平均得分</small>
+                                </div>
+                            </div>
+                            <div class="col-4">
+                                <div class="p-2 border rounded bg-light">
+                                    <h3 class="text-warning">#{{ rank }}</h3>
+                                    <small class="text-muted">全站排名</small>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <h5 class="border-bottom pb-2 mb-3 mt-4">权限列表</h5>
+                        <div>
+                            {% if permissions %}
+                                {% for perm in permissions %}
+                                    <span class="badge bg-info text-dark me-1">{{ perm }}</span>
+                                {% endfor %}
+                            {% else %}
+                                <span class="text-muted">无特殊权限 (默认访问公开题库)</span>
+                            {% endif %}
+                        </div>
+                    </div>
+                </div>
+
+                <hr>
+
+                <h4 class="mb-3">修改资料</h4>
+                <form method="POST" action="{{ url_for('profile') }}">
+                    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
+                    
+                    <div class="mb-3">
+                        <label for="username" class="form-label">用户名</label>
+                        <input type="text" class="form-control" id="username" name="username" value="{{ current_user.username }}">
+                    </div>
+
+                    <div class="mb-3">
+                        <label for="email" class="form-label">邮箱</label>
+                        <input type="email" class="form-control" id="email" name="email" value="{{ current_user.email or '' }}" placeholder="设置邮箱以便找回密码">
+                    </div>
+
+                    <div class="mb-3">
+                        <label for="new_password" class="form-label">新密码 <small class="text-muted">(留空则不修改)</small></label>
+                        <input type="password" class="form-control" id="new_password" name="new_password">
+                    </div>
+
+                    <div class="mb-3">
+                        <label for="confirm_password" class="form-label">确认新密码</label>
+                        <input type="password" class="form-control" id="confirm_password" name="confirm_password">
+                    </div>
+
+                    <div class="mb-3">
+                        <label for="current_password" class="form-label">当前密码 <span class="text-danger">*</span> <small class="text-muted">(修改任何信息都需要验证)</small></label>
+                        <input type="password" class="form-control" id="current_password" name="current_password" required>
+                    </div>
+
+                    <div class="d-grid gap-2">
+                        <button type="submit" class="btn btn-primary">保存修改</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
