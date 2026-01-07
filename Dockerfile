@@ -31,6 +31,7 @@ ENV PYTHONUNBUFFERED=1
 # Expose the port the app runs on
 EXPOSE 8080
 
-# Command to run the application using the production WSGI script
+# Command to run the application using Gunicorn with Eventlet for SocketIO support
 # Wait for DB first, then start app
-CMD ["sh", "-c", "python web/wait_for_db.py && python web/wsgi.py"]
+# -w 4: Use 4 workers to handle higher concurrency (Web IO)
+CMD ["sh", "-c", "python web/wait_for_db.py && gunicorn --worker-class eventlet -w 4 --bind 0.0.0.0:8080 web.app:app"]

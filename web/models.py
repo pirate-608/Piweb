@@ -106,3 +106,56 @@ class UserPermission(db.Model):
 class SystemSetting(db.Model):
     key = db.Column(db.String(50), primary_key=True)
     value = db.Column(db.Text, nullable=True)
+
+# Forum Models
+class Board(db.Model):
+    id = db.Column(db.Integer, primary_key=True)
+    name = db.Column(db.String(100), nullable=False)
+    description = db.Column(db.String(255))
+    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+    order = db.Column(db.Integer, default=0) # For sorting
+    
+    # Relationships
+    # topics = db.relationship('Topic', backref='board', lazy=True, cascade="all, delete-orphan")
+
+class Topic(db.Model):
+    id = db.Column(db.Integer, primary_key=True)
+    board_id = db.Column(db.Integer, db.ForeignKey('board.id'), nullable=False)
+    user_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False)
+    title = db.Column(db.String(200), nullable=False)
+    content = db.Column(db.Text, nullable=False)
+    images_json = db.Column(db.Text, default='[]')
+    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+    updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+    views = db.Column(db.Integer, default=0)
+    is_pinned = db.Column(db.Boolean, default=False)
+    is_locked = db.Column(db.Boolean, default=False)
+    is_deleted = db.Column(db.Boolean, default=False) # Soft delete
+    
+    board = db.relationship('Board', backref=db.backref('topics', lazy=True, cascade="all, delete-orphan"))
+    user = db.relationship('User', backref=db.backref('topics', lazy=True))
+    likes = db.relationship('TopicLike', backref='topic', lazy=True, cascade="all, delete-orphan")
+
+    @property
+    def images(self):
+        return json.loads(self.images_json or '[]')
+    
+    @images.setter
+    def images(self, value):
+        self.images_json = json.dumps(value)
+
+class Post(db.Model):
+    id = db.Column(db.Integer, primary_key=True)
+    topic_id = db.Column(db.Integer, db.ForeignKey('topic.id'), nullable=False)
+    user_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False)
+    content = db.Column(db.Text, nullable=False)
+    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+    
+    topic = db.relationship('Topic', backref=db.backref('posts', lazy=True, cascade="all, delete-orphan"))
+    user = db.relationship('User', backref=db.backref('posts', lazy=True))
+
+class TopicLike(db.Model):
+    user_id = db.Column(db.Integer, db.ForeignKey('user.id'), primary_key=True)
+    topic_id = db.Column(db.Integer, db.ForeignKey('topic.id'), primary_key=True)
+    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+

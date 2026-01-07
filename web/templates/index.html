@@ -1,18 +1,18 @@
 {% extends "base.html" %}
 
 {% block content %}
-<div class="p-5 mb-4 bg-light rounded-3">
+<div class="p-5 mb-4 rounded-3" style="background-color: #1e1e1e; color: #e0e0e0; border: 1px solid #333;">
     <div class="container-fluid py-5">
-        <h1 class="display-5 fw-bold">欢迎使用自动阅卷系统</h1>
-        <p class="col-md-8 fs-4">本系统采用 C 语言编写核心阅卷逻辑，Python Flask 提供 Web 交互界面。</p>
-        <div class="d-grid gap-2 d-md-flex justify-content-md-start">
+        <h1 class="display-5 fw-bold text-white">Night's Watch Window (NWW)</h1>
+        <p class="col-md-8 fs-4 text-muted">守夜人之窗 —— 致力于为67656个用户开发的线上夜空。</p>
+        <div class="d-grid gap-2 d-md-flex justify-content-md-start mt-4">
             {% if current_user.is_authenticated %}
-                <a href="/start_exam" class="btn btn-primary btn-lg px-4 me-md-2">开始考试</a>
+                <a href="/start_exam" class="btn btn-outline-light btn-lg px-4 me-md-2">⚔️ 开始试炼</a>
                 {% if current_user.is_admin %}
-                    <a href="/add" class="btn btn-outline-secondary btn-lg px-4">添加题目</a>
+                    <a href="/add" class="btn btn-outline-secondary btn-lg px-4">📜 发布任务</a>
                 {% endif %}
             {% else %}
-                <a href="{{ url_for('login') }}" class="btn btn-primary btn-lg px-4 me-md-2">登录</a>
+                <a href="{{ url_for('login') }}" class="btn btn-outline-light btn-lg px-4 me-md-2">登录</a>
                 <a href="{{ url_for('register') }}" class="btn btn-outline-secondary btn-lg px-4">注册</a>
             {% endif %}
         </div>
@@ -289,9 +289,9 @@ document.addEventListener('DOMContentLoaded', () => {
 
 <div class="row align-items-md-stretch">
     <div class="col-md-12">
-        <div class="h-100 p-5 bg-light border rounded-3">
+        <div class="h-100 p-5 bg-light border rounded-3 text-dark">
             <h2>关于本项目</h2>
-            <p>本项目是一个自动阅卷系统的演示，旨在展示 C 语言与 Python Web 框架的结合。</p>
+            <p>本系统采用 C 语言编写核心阅卷逻辑，Python Flask 提供 Web 交互界面，Docker 容器提供开发和部署环境，数据库使用专业级 PostgreSQL。</p>
             <hr>
             <h4>开发者联系方式</h4>
             <ul class="list-unstyled">

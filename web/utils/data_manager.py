@@ -59,13 +59,13 @@ class DataManager:
             if Question.query.count() == 0:
                 self.migrate_from_files()
             
-            # Create default admin if not exists
-            if User.query.filter_by(username='admin').first() is None:
+            # Create default admin if NO admin exists
+            if User.query.filter_by(is_admin=True).count() == 0:
                 admin = User(username='admin', is_admin=True)
                 admin.set_password('admin123')
                 db.session.add(admin)
                 db.session.commit()
-                print("Created default admin user (admin/admin123)")
+                print("Created default admin user (admin/admin123) because no admin existed.")
 
     def migrate_from_files(self):
         print("Migrating data from files to SQLite...")
@@ -318,12 +318,12 @@ class DataManager:
         for cat, data in category_results.items():
             stat = UserCategoryStat.query.filter_by(user_id=user_id, category=cat).first()
             if not stat:
-                stat = UserCategoryStat(user_id=user_id, category=cat)
+                stat = UserCategoryStat(user_id=user_id, category=cat, total_attempts=0, total_score=0, total_max_score=0)
                 db.session.add(stat)
             
-            stat.total_attempts += 1
-            stat.total_score += data['score']
-            stat.total_max_score += data['max_score']
+            stat.total_attempts = (stat.total_attempts or 0) + 1
+            stat.total_score = (stat.total_score or 0) + data['score']
+            stat.total_max_score = (stat.total_max_score or 0) + data['max_score']
             
             # Check for permission grant (e.g., > 80% accuracy and > 5 attempts)
             # This is a simple rule, can be made more complex

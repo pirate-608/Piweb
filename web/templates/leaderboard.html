@@ -18,11 +18,11 @@
     <!-- Global Leaderboard -->
     <div class="tab-pane fade show active" id="global" role="tabpanel" aria-labelledby="global-tab">
         <div class="card shadow-sm">
-            <div class="card-body">
+            <div class="card-body bg-white text-dark">
                 <h5 class="card-title">全站平均正确率排名</h5>
                 <div class="table-responsive">
                     <table class="table table-hover">
-                        <thead>
+                        <thead class="table-dark">
                             <tr>
                                 <th>#</th>
                                 <th>用户</th>
@@ -60,12 +60,12 @@
     {% for cat, leaderboard in category_leaderboards.items() %}
     <div class="tab-pane fade" id="cat-{{ loop.index }}" role="tabpanel" aria-labelledby="cat-{{ loop.index }}-tab">
         <div class="card shadow-sm">
-            <div class="card-body">
+            <div class="card-body bg-white text-dark">
                 <h5 class="card-title">{{ cat }} - 正确率排名</h5>
                 <p class="text-muted small">在此分类中表现优异（正确率>80%且尝试>3次）的用户将获得添加该类题目的权限。</p>
                 <div class="table-responsive">
                     <table class="table table-hover">
-                        <thead>
+                        <thead class="table-dark">
                             <tr>
                                 <th>#</th>
                                 <th>用户</th>

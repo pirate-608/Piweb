@@ -1,6 +1,7 @@
 import os
 import sys
 import platform
+import redis
 
 class Config:
     # Grading Configuration
@@ -71,6 +72,15 @@ class Config:
         SQLALCHEMY_DATABASE_URI = os.environ.get('DATABASE_URL') or \
                                 'sqlite:///' + os.path.join(INSTANCE_PATH, 'data.db')
         
+        # Optimize Database Connection Pool
+        # Limits connections per process to avoid "Too many connections" error
+        # Web (4 workers) + Celery (22 workers) = ~26 processes * (2+1) connections < 100 max
+        SQLALCHEMY_ENGINE_OPTIONS = {
+            'pool_size': 2,
+            'max_overflow': 1,
+            'pool_recycle': 1800,
+        }
+        
         # Uploads
         UPLOAD_FOLDER = os.path.join(BASE_DIR, 'web', 'static', 'uploads')
 
@@ -101,4 +111,26 @@ class Config:
     # 对于 I/O 密集型（数据库读写多），可以设大一点；对于 CPU 密集型（计算多），设为核心数即可。
     # 默认自动设置为 CPU 核心数，最小为 2
     GRADING_WORKERS = max(2, os.cpu_count() or 4)
+
+    # Redis Config
+    REDIS_HOST = os.environ.get('REDIS_HOST', '127.0.0.1')
+    REDIS_PORT = int(os.environ.get('REDIS_PORT', 6379))
+    CELERY_BROKER_URL = f'redis://{REDIS_HOST}:{REDIS_PORT}/0'
+    CELERY_RESULT_BACKEND = f'redis://{REDIS_HOST}:{REDIS_PORT}/0'
+
+    # Flask-Session Config
+    SESSION_TYPE = 'redis'
+    SESSION_PERMANENT = False
+    SESSION_USE_SIGNER = True
+    SESSION_KEY_PREFIX = 'grading:session:'
+    try:
+        SESSION_REDIS = redis.Redis(host=REDIS_HOST, port=REDIS_PORT)
+    except Exception as e:
+        print(f"Warning: Redis configuration failed: {e}")
+        SESSION_TYPE = 'filesystem'
+
+    # Celery Config
+    CELERY_BROKER_URL = f'redis://{REDIS_HOST}:{REDIS_PORT}/0'
+    CELERY_RESULT_BACKEND = f'redis://{REDIS_HOST}:{REDIS_PORT}/0'
+
 

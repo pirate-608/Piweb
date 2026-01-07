@@ -2,8 +2,12 @@
 
 这是一个基于 C 语言核心逻辑和 Python Flask Web 界面的自动阅卷系统。支持命令行 (CLI) 和 Web 两种交互方式。
 
-## 🚀 最新优化 (v2.1)
+## 🚀 最新优化 (v2.2) - 异步架构升级
 
+*   ⚡ **异步任务队列**：引入 **Celery + Redis** 架构，将耗时的阅卷任务（特别是批量阅卷）从 Web 主线程剥离，大幅提升 Web 响应速度和吞吐量。
+*   � **实时 WebSocket 反馈**：引入 **Flask-SocketIO**，在后台阅卷过程中实时向前端推送进度更新，无需轮询，体验更加流畅。
+*   �🔄 **Redis 缓存加速**：不仅作为消息队列 Broker，还接管了 Flask Session 存储，并缓存高频访问的仪表盘统计数据，减少数据库压力。
+*   🐋 **全栈容器化**：新增 `worker` (Celery) 和 `redis` 容器，现在 `docker-compose` 一键拉起 5 个微服务 (Web, DB, Redis, Worker, Tunnel)。
 *   🗄️ **企业级数据库**：目前默认支持 **PostgreSQL**，支持高并发读写，彻底解决 SQLite 的锁竞争问题。
 *   🛠️ **智能迁移**：提供 `migrate_to_postgres.py` 脚本，支持从旧版 SQLite 无缝迁移数据到 PostgreSQL。
 *   🛡️ **安全性增强**：全站启用 CSRF 防护，确保表单提交安全。
@@ -59,66 +63,48 @@ auto-grading-system/
 
 ## 快速开始
 
-### 方式一：Docker 容器化部署 (推荐 - Recommended)
+### Docker 容器化部署 (Recommended)
 
-这是最稳定、环境最一致的运行方式，适合生产环境或希望快速体验的用户。
+这是最稳定、环境最一致的运行方式，也是目前**唯一推荐**的生产级部署方式。
 
 1.  **启动服务**:
     在项目根目录下打开终端，运行：
     ```powershell
     docker-compose up -d --build
     ```
-    *系统会自动构建 Web 容器、启动 PostgreSQL 数据库，并完成初始化。*
+    系统会自动通过 Docker Compose 拉起以下服务：
+    *   **web**: Python Flask 应用 (Waitress server)
+    *   **db**: PostgreSQL 15 数据库
+    *   **redis**: Redis 7.0 (缓存与消息队列)
+    *   **worker**: Celery Worker (后台异步阅卷进程)
+    *   **tunnel**: Cloudflare Tunnel (内网穿透 HTTP2协议)
 
 2.  **访问应用**:
-    打开浏览器访问 [http://localhost:8080](http://localhost:8080)。
+    *   **内网**: [http://localhost:8080](http://localhost:8080)
+    *   **外网**: 访问您在 Cloudflare Dashboard 配置的域名 (需配置 `tunnel_token.txt`)。
     *   默认管理员账号: `admin` / `admin123`
-
-### 方式二：本地脚本部署 (Legacy / Local Dev)
-
-如果您需要在 Windows 本地直接运行代码进行开发调试：
-
-1.  **启动数据库**: 您仍需先启动一个 Postgres 实例，或者修改配置使用 SQLite。
-    ```powershell
-    docker run --name pg-grading -e POSTGRES_PASSWORD=postgres -p 5432:5432 -d postgres:15-alpine
-    ```
-
-2.  **运行脚本**:
-    进入 `scripts` 目录，双击运行 **`deploy_local.bat`** (会自动调用 PowerShell 版本的脚本)。
-    该脚本会自动完成环境初始化，并提供开发菜单。
-
-### 方式三：公网部署脚本 (Legacy)
-
-进入 `scripts` 目录，双击运行 **`deploy_public.bat`**。
-*注意：此脚本是在本机直接运行 Web 服务，如果您已经使用了 Docker 方式，请勿同时运行此脚本，否则会发生端口冲突。*
 
 **🌐 如何配置 Cloudflare Tunnel (外网访问)**
 
 为了获得稳定的公网访问地址，并配合 Docker 部署使用，请按照以下步骤操作。
 
-**⚠️ 重要提示**：在部分网络环境（如校园网、公司内网）中，默认的 QUIC 协议可能被屏蔽，导致隧道无法连接。请**务必**加上 `--protocol http2` 参数。
+**⚠️ 重要提示**：Docker 容器内的隧道服务默认已配置 `--protocol http2` 参数，可自动绕过 UDP/QUIC 屏蔽。
 
-1.  **准备环境**:
-    *   下载 Windows 版 [cloudflared.exe](https://github.com/cloudflare/cloudflared/releases)。
-    *   将 `cloudflared.exe` 放入项目根目录 (`auto-grading-system/`)。
-
-2.  **配置隧道 (Token 模式)**:
+1.  **准备 Token**:
     *   登录 [Cloudflare Zero Trust Dashboard](https://one.dash.cloudflare.com/)。
     *   转到 **Networks > Tunnels**，点击 **Create a tunnel**。
     *   选择 **Cloudflared** 连接器类型。
     *   在 "Install and run a connector" 页面，**复制 `--token` 后面的那串长字符**。
-    *   在项目根目录下创建一个名为 **`tunnel_token.txt`** 的文件，将 token **粘贴**进去。
-    *   配置 **Public Hostname** (Service: `HTTP` : `localhost:8080`)。
+    *   配置 **Public Hostname** (Service: `HTTP` : `web:8080`)。*注意：在 Docker 内部，Web 服务的主机名是 `web` 而不是 `localhost`。*
 
-3.  **启动隧道 (配合 Docker)**:
-    您的 Web 服务已经在 Docker 中运行 (localhost:8080)，现在只需单独启动隧道：
-    ```powershell
-    # 推荐：强制使用 HTTP2 协议，避免 UDP/QUIC 被阻断
-    .\cloudflared.exe tunnel run --protocol http2 --token (Get-Content tunnel_token.txt)
-    ```
+2.  **创建配置文件**:
+    *   在项目根目录下创建一个名为 **`tunnel_token.txt`** 的文件。
+    *   将 token **粘贴**进去 (文件中只保留这一行 token 字符串)。
 
-4.  **旧版脚本说明**:
-    如果您没有使用 Docker，而是使用 `scripts/deploy_public.ps1`，该脚本也已更新支持自动添加 http2 参数。
+3.  **启动隧道**:
+    *   无需任何额外操作。只要 `tunnel_token.txt` 存在，再次运行 `docker-compose up -d --build`，隧道容器就会自动启动。
+    *   您可以通过 `docker logs auto-grading-system-tunnel-1` 查看隧道连接状态。
+    *   使用 `docker logs auto-grading-system-tunnel-1` 查看连接日志。
 
 ## 用户指南 (Web 版)
 
@@ -161,9 +147,19 @@ auto-grading-system/
 | **启动隧道** | `.\cloudflared.exe ...` | 见上文说明。 |
 | **(Legacy) 脚本启动** | `.\scripts\deploy_public.ps1` | 旧版一键脚本。 |
 
-### 2. 手动分步启动
+#### **重要提示** 
+当您对代码进行修改和维护时，建议先停止docker（自动断开网络连接），完成修改后再重新构建并运行：
 
-如果您不想使用脚本，可以手动分步启动及其组件：
+1. 先彻底移除所有容器（可选，这会自动断开所有网络连接）
+`docker-compose down`
+
+1. 重新构建并启动（-d 后台运行，--build 确保应用了新的代码修改）
+`docker-compose up -d --build`
+
+
+### 2. 手动分步启动 (Legacy / 非 Docker 环境)
+
+如果您不想使用 Docker 也不想使用脚本，可以手动分步启动各项组件（仅适用于本地开发）：
 
 **步骤 A: 启动 Web 服务器 (Waitress)**
 ```powershell

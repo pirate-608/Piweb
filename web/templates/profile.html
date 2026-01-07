@@ -49,11 +49,17 @@
                         
                         <h5 class="border-bottom pb-2 mb-3 mt-4">权限列表</h5>
                         <div>
+                            {% if current_user.is_admin %}
+                                <span class="badge bg-danger mb-2">超级管理员权限 (Super Admin)</span>
+                            {% endif %}
+
                             {% if permissions %}
                                 {% for perm in permissions %}
                                     <span class="badge bg-info text-dark me-1">{{ perm }}</span>
                                 {% endfor %}
-                            {% else %}
+                            {% endif %}
+
+                            {% if not current_user.is_admin and not permissions %}
                                 <span class="text-muted">无特殊权限 (默认访问公开题库)</span>
                             {% endif %}
                         </div>

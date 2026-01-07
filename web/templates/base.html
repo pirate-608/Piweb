@@ -3,18 +3,83 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>自动阅卷系统</title>
+    <title>NWW - Night's Watch Window</title>
     <link href="{{ url_for('static', filename='css/bootstrap.min.css') }}" rel="stylesheet">
     <style>
-        body { padding-top: 20px; }
-        /* .container { max-width: 800px; } Removed to allow responsive full width */
+        /* Dark Theme Variables */
+        :root {
+            --bg-color: #121212;
+            --surface-color: #1e1e1e;
+            --text-primary: #e0e0e0;
+            --text-secondary: #a0a0a0;
+            --accent-color: #bb86fc;
+            --border-color: #2c2c2c;
+        }
+
+        body { 
+            padding-top: 20px; 
+            background-color: var(--bg-color);
+            color: var(--text-primary);
+        }
+        
+        /* Navbar overrides */
+        .navbar {
+            background-color: var(--surface-color) !important;
+            border-bottom: 1px solid var(--border-color);
+        }
+        .navbar-light .navbar-brand, 
+        .navbar-light .navbar-nav .nav-link {
+            color: var(--text-primary);
+        }
+        .navbar-light .navbar-nav .nav-link:hover {
+            color: var(--accent-color);
+        }
+
+        /* Card overrides */
+        .card {
+            background-color: var(--surface-color);
+            border: 1px solid var(--border-color);
+            color: var(--text-primary);
+        }
+        .card-header {
+            background-color: #252525 !important;
+            border-bottom: 1px solid var(--border-color);
+            color: var(--text-primary);
+        }
+        .list-group-item {
+            background-color: var(--surface-color);
+            border-color: var(--border-color);
+            color: var(--text-primary);
+        }
+
+        /* Table overrides */
+        .table {
+            color: var(--text-primary);
+            border-color: var(--border-color);
+        }
+        .table-light {
+            --bs-table-bg: #2c2c2c;
+            --bs-table-color: var(--text-primary);
+        }
+        
+        /* Alert overrides */
+        .alert-info {
+            background-color: #1a2634;
+            border-color: #0f1c29;
+            color: #9ec5fe;
+        }
+        .alert-success {
+            background-color: #112d20;
+            border-color: #0d2218;
+            color: #75b798;
+        }
     </style>
 </head>
 <body>
     <div class="container">
-        <nav class="navbar navbar-expand-lg navbar-light bg-light rounded mb-4 mt-3 shadow-sm">
+        <nav class="navbar navbar-expand-lg navbar-dark bg-dark rounded mb-4 mt-3 shadow-sm">
             <div class="container-fluid">
-                <a class="navbar-brand fw-bold" href="/">📝 自动阅卷系统</a>
+                <a class="navbar-brand fw-bold" href="/">🌌 NWW</a>
                 <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarMain" aria-controls="navbarMain" aria-expanded="false" aria-label="Toggle navigation">
                     <span class="navbar-toggler-icon"></span>
                 </button>
@@ -34,6 +99,9 @@
                                 </li>
                                 <li class="nav-item">
                                     <a class="nav-link" href="/leaderboard">🏆 排行榜</a>
+                                </li>
+                                <li class="nav-item">
+                                    <a class="nav-link" href="{{ url_for('forum.index') }}">💬 讨论区</a>
                                 </li>
                                 {% if current_user.is_admin or current_user.permissions %}
                                 <li class="nav-item">

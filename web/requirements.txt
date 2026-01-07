@@ -4,3 +4,10 @@ Flask-Login
 Flask-WTF
 waitress
 psycopg2
+redis
+Flask-Session
+celery
+flask-socketio
+eventlet
+gunicorn
+gevent

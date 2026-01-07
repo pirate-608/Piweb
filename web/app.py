@@ -12,6 +12,15 @@ from werkzeug.utils import secure_filename
 from flask import Flask, render_template, request, redirect, url_for, session, flash, Response, send_from_directory
 from flask_login import LoginManager, login_user, logout_user, login_required, current_user
 from flask_wtf.csrf import CSRFProtect
+from flask_session import Session
+from flask_socketio import SocketIO, join_room, leave_room
+import redis
+import celery_utils
+import eventlet
+
+# Patch for better performance (Important for socketio async mode)
+# eventlet.monkey_patch() 
+
 from config import Config
 from utils.data_manager import DataManager
 from utils.queue_manager import GradingQueue
@@ -36,7 +45,27 @@ else:
 app.config.from_object(Config)
 db.init_app(app)
 
+# Initialize Flask-Session (Server-side Session)
+Session(app)
+
+# Initialize SocketIO with message queue (for Celery communication)
+socketio = SocketIO(app, message_queue=app.config.get('CELERY_BROKER_URL'), async_mode='eventlet', cors_allowed_origins='*')
+
+# Initialize Redis Client for Caching (Manual)
+try:
+    cache_redis = redis.Redis(host=Config.REDIS_HOST, port=Config.REDIS_PORT, decode_responses=True)
+    # Test connection
+    cache_redis.ping()
+    print("Redis cache connected.")
+except Exception as e:
+    print(f"Warning: Redis cache connection failed: {e}")
+    cache_redis = None
+
 csrf = CSRFProtect(app)
+
+from forum_routes import forum_bp
+
+app.register_blueprint(forum_bp)
 
 login_manager = LoginManager()
 login_manager.init_app(app)
@@ -45,6 +74,10 @@ login_manager.login_view = 'login'
 data_manager = DataManager(Config)
 if not os.environ.get('SKIP_INIT_DB'):
     data_manager.init_db(app)
+
+# Initialize Celery
+if not hasattr(app.extensions, 'celery'):
+    app.extensions['celery'] = celery_utils.make_celery(app)
 
 @login_manager.user_loader
 def load_user(user_id):
@@ -143,7 +176,12 @@ def admin_users():
         flash('您没有权限访问此页面', 'danger')
         return redirect(url_for('index'))
     
-    users = User.query.all()
+    q = request.args.get('q', '').strip()
+    if q:
+        users = User.query.filter(User.username.ilike(f'%{q}%')).all()
+    else:
+        users = User.query.all()
+        
     user_list = []
     
     for u in users:
@@ -155,7 +193,7 @@ def admin_users():
             'permissions': permissions
         })
         
-    return render_template('admin_users.html', users=user_list)
+    return render_template('admin_users.html', users=user_list, search_query=q)
 
 @app.route('/admin/user/<int:user_id>')
 @login_required
@@ -198,16 +236,25 @@ def admin_user_detail(user_id):
 
 @app.route('/')
 def index():
-    # Ensure table exists (lazy migration for SystemSetting)
-    # db.create_all() is usually called at app startup but for new models we might want this or rely on restart
-    # In this environment, restarting the server is hard because of the terminal lock, 
-    # but the previous turn said "Server is currently running". 
-    # If I just added the model, the table might not exist in the DB yet unless I create it.
-    # To be safe, I'll attempt a lazy create if it fails, or just rely on manual restart if needed.
-    # Actually, let's just do standard query.
+    # Use Redis Cache for System Stats (High traffic optimization)
+    stats = None
+    if cache_redis:
+        try:
+            cached_stats = cache_redis.get('system_stats')
+            if cached_stats:
+                stats = json.loads(cached_stats)
+        except Exception as e:
+            print(f"Redis cache read error: {e}")
     
-    stats = data_manager.get_system_stats()
-    
+    if stats is None:
+        stats = data_manager.get_system_stats()
+        if cache_redis:
+            try:
+                # Cache for 60 seconds
+                cache_redis.setex('system_stats', 60, json.dumps(stats))
+            except Exception as e:
+                print(f"Redis cache set error: {e}")
+
     user_charts = None
     user_stats = None
     if current_user.is_authenticated:
@@ -620,7 +667,13 @@ def history():
     results = data_manager.load_results(user_id=user_id)
     # Sort by timestamp descending
     results.sort(key=lambda x: x['timestamp'], reverse=True)
-    return render_template('history.html', results=results)
+    
+    q = request.args.get('q', '').strip()
+    if q:
+        q_lower = q.lower()
+        results = [r for r in results if q_lower in str(r.get('username', '')).lower() or q_lower in str(r.get('timestamp', '')).lower()]
+        
+    return render_template('history.html', results=results, search_query=q)
 
 @app.route('/leaderboard')
 @login_required
@@ -766,4 +819,17 @@ def internal_server_error(e):
 if __name__ == '__main__':
     # Disable debug mode in production/packaged environment
     debug_mode = not getattr(sys, 'frozen', False)
-    app.run(debug=debug_mode, port=5000)
+    # Use socketio.run for WebSocket capability
+    socketio.run(app, debug=debug_mode, port=5000)
+
+# SocketIO Event Handlers
+@socketio.on('join')
+def on_join(data):
+    """
+    Client joins a room named after the task_id.
+    """
+    room = data.get('room')
+    if room:
+        join_room(room)
+        # print(f"Client joined room: {room}")
+

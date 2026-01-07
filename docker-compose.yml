@@ -7,14 +7,38 @@ services:
       - "8080:8080"
     environment:
       - DATABASE_URL=postgresql://postgres:postgres@db:5432/grading_system
+      - REDIS_HOST=redis
+      - REDIS_PORT=6379
     depends_on:
       - db
+      - redis
     volumes:
       # Mount questions.txt so updates persist to host
       - ./questions.txt:/app/questions.txt
       # Mount uploads directory for images
       - ./web/static/uploads:/app/web/static/uploads
-      # Mount logs/config if needed (optional)
+
+  worker:
+    build: .
+    restart: always
+    command: ["celery", "-A", "celery_worker.celery_app", "worker", "--loglevel=info"]
+    environment:
+      - DATABASE_URL=postgresql://postgres:postgres@db:5432/grading_system
+      - REDIS_HOST=redis
+      - REDIS_PORT=6379
+      - C_FORCE_ROOT=true  # Required if running as root in Docker
+    depends_on:
+      - db
+      - redis
+      - web
+    volumes:
+      - ./questions.txt:/app/questions.txt
+
+  redis:
+    image: redis:alpine
+    restart: always
+    ports:
+      - "6379:6379"
 
   db:
     image: postgres:15-alpine
@@ -35,9 +59,9 @@ services:
       context: .
       dockerfile: Dockerfile.tunnel
     restart: always
-    # "service:web" 模式让 tunnel 容器共享 web 容器的网络栈
-    # 这样 tunnel 里的 localhost:8080 就直接指向 web 应用
-    network_mode: service:web
+    # 改为使用 links 或 host 名访问，不再使用 service:web 模式
+    # 这样 tunnel 容器有独立的网络栈，不会因为 web 重建而丢失网络
+    # 注意: Cloudflare Dashboard 中要把 Service 配置改为 http://web:8080 (不能是 localhost)
     depends_on:
       - web
     volumes:

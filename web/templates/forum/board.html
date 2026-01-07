@@ -1,0 +1,65 @@
+{% extends "base.html" %}
+{% block content %}
+<div class="container mt-4">
+    <nav aria-label="breadcrumb">
+        <ol class="breadcrumb">
+            <li class="breadcrumb-item"><a href="{{ url_for('forum.index') }}">讨论区</a></li>
+            <li class="breadcrumb-item active">{{ board.name }}</li>
+        </ol>
+    </nav>
+
+    <div class="d-flex justify-content-between align-items-center mb-3">
+        <h3>{{ board.name }}</h3>
+        <a href="{{ url_for('forum.new_topic', board_id=board.id) }}" class="btn btn-primary">
+            <i class="bi bi-pencil-square"></i> 发布主题
+        </a>
+    </div>
+
+    <div class="list-group shadow-sm">
+        {% for topic in topics.items %}
+        <a href="{{ url_for('forum.view_topic', topic_id=topic.id) }}" class="list-group-item list-group-item-action d-flex justify-content-between align-items-center p-3">
+            <div>
+                <div class="mb-1">
+                    {% if topic.is_pinned %}
+                    <span class="badge bg-danger me-1">置顶</span>
+                    {% endif %}
+                    {% if topic.is_locked %}
+                    <span class="badge bg-secondary me-1">锁定</span>
+                    {% endif %}
+                    <span class="fw-bold fs-5">{{ topic.title }}</span>
+                </div>
+                <small class="text-muted">
+                    <i class="bi bi-person"></i> {{ topic.user.username }} &nbsp;
+                    <i class="bi bi-clock"></i> {{ topic.updated_at.strftime('%Y-%m-%d %H:%M') }}
+                </small>
+            </div>
+            <div class="text-end text-muted">
+                <div><i class="bi bi-chat-dots"></i> {{ topic.posts|length }}</div>
+                <div><i class="bi bi-eye"></i> {{ topic.views }}</div>
+            </div>
+        </a>
+        {% else %}
+        <div class="list-group-item text-center p-5">
+            <p class="mb-0 text-muted">本版块暂无主题</p>
+        </div>
+        {% endfor %}
+    </div>
+
+    <!-- Pagination -->
+    {% if topics.pages > 1 %}
+    <nav class="mt-4">
+        <ul class="pagination justify-content-center">
+            {% for page in topics.iter_pages() %}
+                {% if page %}
+                    <li class="page-item {{ 'active' if page == topics.page else '' }}">
+                        <a class="page-link" href="{{ url_for('forum.view_board', board_id=board.id, page=page) }}">{{ page }}</a>
+                    </li>
+                {% else %}
+                    <li class="page-item disabled"><span class="page-link">...</span></li>
+                {% endif %}
+            {% endfor %}
+        </ul>
+    </nav>
+    {% endif %}
+</div>
+{% endblock %}
