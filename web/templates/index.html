@@ -186,8 +186,8 @@ function updateQueueStats() {
         .then(r => r.json())
         .then(data => {
             if(data.error) return;
-            document.getElementById('queue-waiting').innerText = data.waiting_count;
-            document.getElementById('queue-active').innerText = data.active_tasks;
+            document.getElementById('queue-waiting').innerText = data.waiting;
+            document.getElementById('queue-active').innerText = data.active;
         })
         .catch(e => console.error(e));
 }

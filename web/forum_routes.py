@@ -106,6 +106,10 @@ def view_board(board_id):
 @forum_bp.route('/board/<int:board_id>/new', methods=['GET', 'POST'])
 @login_required
 def new_topic(board_id):
+    if current_user.is_muted:
+        flash('您已被禁言，无法发布主题', 'danger')
+        return redirect(url_for('forum.view_board', board_id=board_id))
+        
     board = Board.query.get_or_404(board_id)
     if request.method == 'POST':
         title = request.form.get('title')
@@ -153,14 +157,27 @@ def view_topic(topic_id):
 @forum_bp.route('/topic/<int:topic_id>/reply', methods=['POST'])
 @login_required
 def reply_topic(topic_id):
+    if current_user.is_muted:
+        flash('您已被禁言，无法发表回复', 'danger')
+        return redirect(url_for('forum.view_topic', topic_id=topic_id))
+
     topic = Topic.query.get_or_404(topic_id)
     if topic.is_locked:
         flash('该主题已被锁定', 'warning')
         return redirect(url_for('forum.view_topic', topic_id=topic.id))
         
     content = request.form.get('content')
+    parent_id = request.form.get('parent_id')
+    
+    # Optional Validation logic for parent_id existence could go here
+
     if content:
-        post = Post(topic_id=topic.id, user_id=current_user.id, content=content)
+        post = Post(topic_id=topic_id, user_id=current_user.id, content=content)
+        if parent_id:
+            try:
+                post.parent_id = int(parent_id)
+            except: pass
+            
         db.session.add(post)
         topic.updated_at = datetime.utcnow() # Bump topic
         db.session.commit()

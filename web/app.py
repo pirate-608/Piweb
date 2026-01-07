@@ -24,7 +24,7 @@ import eventlet
 from config import Config
 from utils.data_manager import DataManager
 from utils.queue_manager import GradingQueue
-from models import db, User, SystemSetting, UserCategoryStat
+from models import db, User, SystemSetting, UserCategoryStat, Topic, Post
 
 if getattr(sys, 'frozen', False):
     # Determine base directory for resources
@@ -190,10 +190,38 @@ def admin_users():
             'id': u.id,
             'username': u.username,
             'is_admin': u.is_admin,
+            'is_banned': u.is_banned,
+            'is_muted': u.is_muted,
             'permissions': permissions
         })
         
     return render_template('admin_users.html', users=user_list, search_query=q)
+
+@app.route('/admin/user/<int:user_id>/action', methods=['POST'])
+@login_required
+def admin_user_action(user_id):
+    if not current_user.is_admin:
+        return {'status': 'error', 'msg': 'Unauthorized'}, 403
+        
+    user = User.query.get_or_404(user_id)
+    action = request.form.get('action')
+    
+    if user.id == current_user.id:
+        flash('无法对自己执行此操作', 'warning')
+        return redirect(url_for('admin_users'))
+
+    if action == 'toggle_ban':
+        user.is_banned = not user.is_banned
+        msg = f"用户 {user.username} 已{'封禁' if user.is_banned else '解封'}"
+    elif action == 'toggle_mute':
+        user.is_muted = not user.is_muted
+        msg = f"用户 {user.username} 已{'禁言' if user.is_muted else '解除禁言'}"
+    else:
+        msg = "无效操作"
+    
+    db.session.commit()
+    flash(msg, 'success')
+    return redirect(url_for('admin_users'))
 
 @app.route('/admin/user/<int:user_id>')
 @login_required
@@ -337,6 +365,38 @@ def update_announcement():
     flash('系统公告已更新', 'success')
     return redirect(url_for('index'))
 
+@app.route('/user/<int:user_id>')
+@login_required
+def user_profile(user_id):
+    user = User.query.get_or_404(user_id)
+    
+    # 1. Rank & Stats
+    try:
+        leaderboard = data_manager.get_leaderboard_data()
+        rank = '未上榜'
+        for i, user_stat in enumerate(leaderboard['global']):
+            if user_stat['username'] == user.username:
+                rank = i + 1
+                break
+        
+        stats_query = UserCategoryStat.query.filter_by(user_id=user.id).all()
+        total_exams = sum(s.total_attempts for s in stats_query)
+        total_score = sum(s.total_score for s in stats_query)
+        avg_score = (total_score / total_exams) if total_exams > 0 else 0.0
+        
+        stats = {
+            'total_exams': total_exams,
+            'avg_score': avg_score
+        }
+    except:
+        rank = 'N/A'
+        stats = {'total_exams': 0, 'avg_score': 0}
+        
+    # 2. Topics
+    topics = Topic.query.filter_by(user_id=user.id, is_deleted=False).order_by(Topic.created_at.desc()).limit(20).all()
+    
+    return render_template('user_profile.html', user=user, rank=rank, stats=stats, topics=topics)
+
 @app.route('/login', methods=['GET', 'POST'])
 def login():
     if current_user.is_authenticated:
@@ -350,6 +410,9 @@ def login():
         user = User.query.filter((User.username == login_id) | (User.email == login_id)).first()
         
         if user and user.check_password(password):
+            if user.is_banned:
+                flash('该账号已被封禁，无法登录', 'danger')
+                return render_template('login.html')
             login_user(user)
             next_page = request.args.get('next')
             return redirect(next_page or url_for('index'))
@@ -424,10 +487,22 @@ def profile():
         'avg_score': avg_score
     }
     
+    # New: Forum Data
+    my_topics = Topic.query.filter_by(user_id=current_user.id, is_deleted=False).order_by(Topic.created_at.desc()).limit(50).all()
+    my_posts = Post.query.filter_by(user_id=current_user.id).order_by(Post.created_at.desc()).limit(50).all()
+    
+    replies_received = Post.query.join(Topic).filter(
+        Topic.user_id == current_user.id,
+        Post.user_id != current_user.id
+    ).order_by(Post.created_at.desc()).limit(20).all()
+    
     return render_template('profile.html', 
                          rank=rank, 
                          permissions=permissions, 
-                         overall_stats=overall_stats)
+                         overall_stats=overall_stats,
+                         my_topics=my_topics,
+                         my_posts=my_posts,
+                         replies_received=replies_received)
 
 @app.route('/register', methods=['GET', 'POST'])
 def register():

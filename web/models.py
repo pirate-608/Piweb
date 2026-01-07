@@ -32,6 +32,8 @@ class User(UserMixin, db.Model):
     email = db.Column(db.String(120), unique=True, nullable=True)
     password_hash = db.Column(db.String(256)) # Increased length for scrypt hashes
     is_admin = db.Column(db.Boolean, default=False)
+    is_banned = db.Column(db.Boolean, default=False)
+    is_muted = db.Column(db.Boolean, default=False)
     
     def set_password(self, password):
         self.password_hash = generate_password_hash(password)
@@ -150,9 +152,11 @@ class Post(db.Model):
     user_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False)
     content = db.Column(db.Text, nullable=False)
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
+    parent_id = db.Column(db.Integer, db.ForeignKey('post.id'), nullable=True)
     
     topic = db.relationship('Topic', backref=db.backref('posts', lazy=True, cascade="all, delete-orphan"))
     user = db.relationship('User', backref=db.backref('posts', lazy=True))
+    replies = db.relationship('Post', backref=db.backref('parent', remote_side=[id]), lazy=True)
 
 class TopicLike(db.Model):
     user_id = db.Column(db.Integer, db.ForeignKey('user.id'), primary_key=True)

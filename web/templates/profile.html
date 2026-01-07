@@ -52,6 +52,14 @@
                             {% if current_user.is_admin %}
                                 <span class="badge bg-danger mb-2">超级管理员权限 (Super Admin)</span>
                             {% endif %}
+                             
+                            {% if current_user.is_banned %}
+                                <span class="badge bg-dark mb-2">已封禁</span>
+                            {% endif %}
+                            
+                            {% if current_user.is_muted %}
+                                <span class="badge bg-warning text-dark mb-2">已禁言</span>
+                            {% endif %}
 
                             {% if permissions %}
                                 {% for perm in permissions %}
@@ -67,9 +75,28 @@
                 </div>
 
                 <hr>
-
-                <h4 class="mb-3">修改资料</h4>
-                <form method="POST" action="{{ url_for('profile') }}">
+                
+                <!-- History Tabs -->
+                <ul class="nav nav-tabs mb-3" id="profileTabs" role="tablist">
+                    <li class="nav-item">
+                        <a class="nav-link active" id="edit-tab" data-bs-toggle="tab" href="#edit" role="tab">修改资料</a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" id="mytopics-tab" data-bs-toggle="tab" href="#mytopics" role="tab">我的帖子</a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" id="myposts-tab" data-bs-toggle="tab" href="#myposts" role="tab">我的评论</a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" id="replies-tab" data-bs-toggle="tab" href="#replies" role="tab">收到的回复</a>
+                    </li>
+                </ul>
+                
+                <div class="tab-content" id="profileTabsContent">
+                    <!-- Edit Profile Tab -->
+                    <div class="tab-pane fade show active" id="edit" role="tabpanel">
+                        <h4 class="mb-3">修改资料</h4>
+                        <form method="POST" action="{{ url_for('profile') }}">
                     <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
                     
                     <div class="mb-3">
@@ -102,7 +129,70 @@
                     </div>
                 </form>
             </div>
+            
+            <!-- My Topics Tab -->
+            <div class="tab-pane fade" id="mytopics" role="tabpanel">
+                {% if my_topics %}
+                    <div class="list-group list-group-flush">
+                        {% for topic in my_topics %}
+                        <a href="{{ url_for('forum.view_topic', topic_id=topic.id) }}" class="list-group-item list-group-item-action">
+                            <div class="d-flex w-100 justify-content-between">
+                                <h6 class="mb-1 text-primary">{{ topic.title }}</h6>
+                                <small class="text-muted">{{ topic.created_at.strftime('%Y-%m-%d') }}</small>
+                            </div>
+                            <small class="text-muted">{{ topic.board.name }}</small>
+                        </a>
+                        {% endfor %}
+                    </div>
+                {% else %}
+                    <p class="text-muted text-center my-3">暂无发帖记录</p>
+                {% endif %}
+            </div>
+
+            <!-- My Posts Tab -->
+            <div class="tab-pane fade" id="myposts" role="tabpanel">
+                {% if my_posts %}
+                    <div class="list-group list-group-flush">
+                        {% for post in my_posts %}
+                        <a href="{{ url_for('forum.view_topic', topic_id=post.topic.id) }}" class="list-group-item list-group-item-action">
+                            <div class="d-flex w-100 justify-content-between">
+                                <h6 class="mb-1 text-dark text-truncate" style="max-width: 80%;">{{ post.content|striptags }}</h6>
+                                <small class="text-muted">{{ post.created_at.strftime('%Y-%m-%d') }}</small>
+                            </div>
+                            <small class="text-muted">回复于: {{ post.topic.title }}</small>
+                        </a>
+                        {% endfor %}
+                    </div>
+                {% else %}
+                    <p class="text-muted text-center my-3">暂无评论记录</p>
+                {% endif %}
+            </div>
+            
+            <!-- Replies Tab -->
+            <div class="tab-pane fade" id="replies" role="tabpanel">
+                {% if replies_received %}
+                    <div class="list-group list-group-flush">
+                        {% for post in replies_received %}
+                        <a href="{{ url_for('forum.view_topic', topic_id=post.topic.id) }}" class="list-group-item list-group-item-action">
+                            <div class="d-flex w-100 justify-content-between">
+                                <div>
+                                    <span class="badge bg-info text-dark">{{ post.user.username }}</span>
+                                    <span class="text-dark ms-2">{{ post.content|striptags }}</span>
+                                </div>
+                                <small class="text-muted">{{ post.created_at.strftime('%Y-%m-%d') }}</small>
+                            </div>
+                            <small class="text-muted">回复了你的主题: {{ post.topic.title }}</small>
+                        </a>
+                        {% endfor %}
+                    </div>
+                {% else %}
+                    <p class="text-muted text-center my-3">暂无收到的回复</p>
+                {% endif %}
+            </div>
+
         </div>
     </div>
+</div>
+</div>
 </div>
 {% endblock %}

@@ -1,0 +1,85 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="row justify-content-center">
+    <div class="col-md-10">
+        <div class="card shadow-sm mb-4">
+            <div class="card-header bg-primary text-white d-flex justify-content-between align-items-center">
+                <h4 class="mb-0"><i class="bi bi-person-badge"></i> {{ user.username }} 的主页</h4>
+                <a href="{{ url_for('forum.index') }}" class="btn btn-outline-light btn-sm">返回论坛</a>
+            </div>
+            <div class="card-body">
+                <div class="row mb-4">
+                    <div class="col-md-3 text-center mb-3">
+                        <div class="display-1 text-secondary"><i class="bi bi-person-fill"></i></div>
+                        <h3 class="mt-2">{{ user.username }}</h3>
+                        <div>
+                            {% if user.is_admin %}
+                                <span class="badge bg-danger">管理员</span>
+                            {% else %}
+                                <span class="badge bg-secondary">普通用户</span>
+                            {% endif %}
+                            
+                            {% if user.is_banned %}
+                                <span class="badge bg-dark">已封禁</span>
+                            {% endif %}
+                            {% if user.is_muted %}
+                                <span class="badge bg-warning text-dark">已禁言</span>
+                            {% endif %}
+                        </div>
+                        <p class="text-muted mt-2">加入时间: N/A</p> <!-- Consider adding joined_at to user model later if needed -->
+                    </div>
+                    <div class="col-md-9">
+                        <h5 class="border-bottom pb-2 mb-3">基本统计</h5>
+                        <div class="row text-center mb-4">
+                            <div class="col-4">
+                                <div class="p-3 border rounded bg-light h-100">
+                                    <h3 class="text-primary">{{ stats.total_exams }}</h3>
+                                    <small class="text-muted">考试次数</small>
+                                </div>
+                            </div>
+                            <div class="col-4">
+                                <div class="p-3 border rounded bg-light h-100">
+                                    <h3 class="text-success">{{ stats.avg_score|round(1) }}</h3>
+                                    <small class="text-muted">平均得分</small>
+                                </div>
+                            </div>
+                            <div class="col-4">
+                                <div class="p-3 border rounded bg-light h-100">
+                                    <h3 class="text-warning">#{{ rank }}</h3>
+                                    <small class="text-muted">全站排名</small>
+                                </div>
+                            </div>
+                        </div>
+
+                        <ul class="nav nav-tabs" id="userTabs" role="tablist">
+                            <li class="nav-item">
+                                <a class="nav-link active" id="topics-tab" data-bs-toggle="tab" href="#topics" role="tab">发布的帖子</a>
+                            </li>
+                        </ul>
+                        <div class="tab-content border border-top-0 p-3" id="userTabsContent">
+                            <div class="tab-pane fade show active" id="topics" role="tabpanel">
+                                {% if topics %}
+                                    <div class="list-group list-group-flush">
+                                        {% for topic in topics %}
+                                        <a href="{{ url_for('forum.view_topic', topic_id=topic.id) }}" class="list-group-item list-group-item-action">
+                                            <div class="d-flex w-100 justify-content-between">
+                                                <h6 class="mb-1 text-primary">{{ topic.title }}</h6>
+                                                <small class="text-muted">{{ topic.created_at.strftime('%Y-%m-%d') }}</small>
+                                            </div>
+                                            <small class="text-muted">{{ topic.board.name }}</small>
+                                        </a>
+                                        {% endfor %}
+                                    </div>
+                                {% else %}
+                                    <p class="text-muted text-center my-3">暂无发帖记录</p>
+                                {% endif %}
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

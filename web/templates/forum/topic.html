@@ -51,7 +51,11 @@
         </div>
         <div class="card-body">
             <div class="d-flex mb-3 align-items-center">
-                <div class="fw-bold me-3"><i class="bi bi-person-circle"></i> {{ topic.user.username }}</div>
+                <div class="fw-bold me-3">
+                    <a href="{{ url_for('user_profile', user_id=topic.user.id) }}" class="text-decoration-none" style="color: #0d6efd;">
+                        <i class="bi bi-person-circle"></i> {{ topic.user.username }}
+                    </a>
+                </div>
                 <div class="text-muted small">{{ topic.created_at.strftime('%Y-%m-%d %H:%M:%S') }}</div>
                 {% if topic.user_id == current_user.id or current_user.is_admin %}
                 <a href="{{ url_for('forum.edit_topic', topic_id=topic.id) }}" class="ms-auto btn btn-sm btn-link text-decoration-none">
@@ -84,33 +88,66 @@
     <!-- Replies -->
     <h5 class="mt-5 mb-3">评论 ({{ posts|length }})</h5>
     {% for post in posts %}
-    <div class="card mb-3 shadow-sm">
+    <div class="card mb-3 shadow-sm" id="post-{{ post.id }}">
         <div class="card-body">
             <div class="d-flex justify-content-between mb-2 border-bottom pb-2">
                 <div>
-                    <strong>{{ post.user.username }}</strong>
+                    <strong>
+                        <a href="{{ url_for('user_profile', user_id=post.user.id) }}" class="text-decoration-none" style="color: #0d6efd;">
+                            {{ post.user.username }}
+                        </a>
+                    </strong>
                     {% if post.user_id == topic.user_id %}
                     <span class="badge bg-primary ms-1">楼主</span>
                     {% endif %}
                 </div>
                 <small class="text-muted">#{{ loop.index }} &nbsp; {{ post.created_at.strftime('%Y-%m-%d %H:%M') }}</small>
             </div>
+            
+            {% if post.parent %}
+            <div class="alert alert-secondary p-2 mb-2 small">
+                <i class="bi bi-reply-fill"></i> 回复 <strong>{{ post.parent.user.username }}</strong>:
+                <div class="text-muted text-truncate">{{ post.parent.content }}</div>
+            </div>
+            {% endif %}
+            
             <p class="mb-0" style="white-space: pre-wrap;">{{ post.content }}</p>
+            
+            <div class="text-end mt-2">
+                <button class="btn btn-sm btn-link text-decoration-none" onclick="replyTo({{ post.id }}, '{{ post.user.username }}')">
+                    <i class="bi bi-chat-dots"></i> 回复
+                </button>
+            </div>
         </div>
     </div>
     {% endfor %}
 
     <!-- Reply Form -->
     {% if not topic.is_locked %}
-    <div class="card mt-4 mb-5">
-        <div class="card-body">
-            <h5>发表评论</h5>
+    <div class="card mt-4 mb-5 shadow-sm border-light">
+        <div class="card-body bg-light">
+            <h5 class="card-title">发表评论</h5>
+            <div id="reply-target-display" class="alert alert-info py-1 px-2 mb-2 d-none">
+                正在回复: <span id="reply-target-user" class="fw-bold"></span> 
+                <button type="button" class="btn-close btn-sm float-end" onclick="cancelReply()"></button>
+            </div>
+            
             <form action="{{ url_for('forum.reply_topic', topic_id=topic.id) }}" method="POST">
                 <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                <input type="hidden" name="parent_id" id="reply-parent-id" value="">
+                
                 <div class="mb-3">
-                    <textarea name="content" class="form-control" style="color: black !important; background-color: #ffffff !important;" rows="3" required placeholder="请文明发言..."></textarea>
+                    {% if current_user.is_muted %}
+                        <textarea class="form-control" rows="3" disabled placeholder="您已被禁言，无法回复"></textarea>
+                    {% else %}
+                        <textarea name="content" id="reply-content" class="form-control" style="color: black !important; background-color: #ffffff !important;" rows="3" required placeholder="请文明发言..."></textarea>
+                    {% endif %}
                 </div>
-                <button type="submit" class="btn btn-primary">提交评论</button>
+                <div class="text-end">
+                    <button type="submit" class="btn btn-primary" {{ 'disabled' if current_user.is_muted else '' }}>
+                        <i class="bi bi-send"></i> 提交评论
+                    </button>
+                </div>
             </form>
         </div>
     </div>
@@ -118,4 +155,21 @@
     <div class="alert alert-secondary mt-4">该主题已被锁定，无法评论。</div>
     {% endif %}
 </div>
+
+<script>
+function replyTo(postId, username) {
+    document.getElementById('reply-parent-id').value = postId;
+    document.getElementById('reply-target-user').innerText = username;
+    document.getElementById('reply-target-display').classList.remove('d-none');
+    document.getElementById('reply-content').focus();
+    // Scroll to form
+    const formOptions = { behavior: 'smooth', block: 'center' };
+    document.querySelector('.card-title').scrollIntoView(formOptions);
+}
+
+function cancelReply() {
+    document.getElementById('reply-parent-id').value = '';
+    document.getElementById('reply-target-display').classList.add('d-none');
+}
+</script>
 {% endblock %}

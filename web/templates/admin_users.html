@@ -23,7 +23,9 @@
                                 <th>ID</th>
                                 <th>用户名</th>
                                 <th>角色</th>
+                                <th>状态</th>
                                 <th>题目访问权限</th>
+                                <th>操作</th>
                             </tr>
                         </thead>
                         <tbody>
@@ -41,6 +43,17 @@
                                     {% endif %}
                                 </td>
                                 <td>
+                                    {% if user.is_banned %}
+                                        <span class="badge bg-dark">已封禁</span>
+                                    {% endif %}
+                                    {% if user.is_muted %}
+                                        <span class="badge bg-warning text-dark">已禁言</span>
+                                    {% endif %}
+                                    {% if not user.is_banned and not user.is_muted %}
+                                        <span class="badge bg-success">正常</span>
+                                    {% endif %}
+                                </td>
+                                <td>
                                     {% if user.is_admin %}
                                         <span class="badge bg-success">全部权限 (Admin)</span>
                                     {% else %}
@@ -49,8 +62,28 @@
                                                 <span class="badge bg-info text-dark">{{ perm }}</span>
                                             {% endfor %}
                                         {% else %}
-                                            <span class="text-muted small">无特殊权限</span>
+                                           <span class="text-muted small">无特殊权限</span>
                                         {% endif %}
+                                    {% endif %}
+                                </td>
+                                <td>
+                                    {% if not user.is_admin %}
+                                    <div class="btn-group btn-group-sm">
+                                        <form action="{{ url_for('admin_user_action', user_id=user.id) }}" method="post" class="d-inline">
+                                            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                                            <input type="hidden" name="action" value="toggle_ban">
+                                            <button type="submit" class="btn {{ 'btn-dark' if not user.is_banned else 'btn-outline-dark' }}" onclick="return confirm('确定修改封禁状态？')">
+                                                {{ '🚫 封禁' if not user.is_banned else '✅ 解封' }}
+                                            </button>
+                                        </form>
+                                        <form action="{{ url_for('admin_user_action', user_id=user.id) }}" method="post" class="d-inline ms-1">
+                                            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                                            <input type="hidden" name="action" value="toggle_mute">
+                                            <button type="submit" class="btn {{ 'btn-warning' if not user.is_muted else 'btn-outline-warning' }}">
+                                                {{ '🔇 禁言' if not user.is_muted else '🔊 解言' }}
+                                            </button>
+                                        </form>
+                                    </div>
                                     {% endif %}
                                 </td>
                             </tr>
