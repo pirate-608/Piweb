@@ -16,6 +16,10 @@ try {
 $env:VIRTUAL_ENV = "$PWD\.venv"
 $env:Path = "$PWD\.venv\Scripts;$env:Path"
 
+# Database Configuration (PostgreSQL)
+# If you want to switch back to SQLite, comment out the following line
+$env:DATABASE_URL = "postgresql://postgres:mysecretpassword@localhost:5432/postgres"
+
 Write-Host "`n==========================================" -ForegroundColor Cyan
 Write-Host "     Auto Grading System - Public Deploy" -ForegroundColor Cyan
 Write-Host "==========================================" -ForegroundColor Cyan

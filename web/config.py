@@ -46,7 +46,9 @@ class Config:
         if not os.path.exists(INSTANCE_PATH):
             os.makedirs(INSTANCE_PATH)
             
-        SQLALCHEMY_DATABASE_URI = 'sqlite:///' + os.path.join(INSTANCE_PATH, 'data.db')
+        # Priority: Env Var > SQLite File
+        SQLALCHEMY_DATABASE_URI = os.environ.get('DATABASE_URL') or \
+                                'sqlite:///' + os.path.join(INSTANCE_PATH, 'data.db')
         
         UPLOAD_FOLDER = os.path.join(BASE_DIR, 'uploads')
         if not os.path.exists(UPLOAD_FOLDER):
@@ -64,7 +66,10 @@ class Config:
         # Database config
         WEB_DIR = os.path.dirname(os.path.abspath(__file__))
         INSTANCE_PATH = os.path.join(WEB_DIR, 'instance')
-        SQLALCHEMY_DATABASE_URI = 'sqlite:///' + os.path.join(INSTANCE_PATH, 'data.db')
+        
+        # Priority: Env Var > SQLite File
+        SQLALCHEMY_DATABASE_URI = os.environ.get('DATABASE_URL') or \
+                                'sqlite:///' + os.path.join(INSTANCE_PATH, 'data.db')
         
         # Uploads
         UPLOAD_FOLDER = os.path.join(BASE_DIR, 'web', 'static', 'uploads')

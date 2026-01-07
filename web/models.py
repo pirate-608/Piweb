@@ -12,15 +12,25 @@ db = SQLAlchemy()
 # This significantly improves concurrency by allowing simultaneous readers and writers
 @event.listens_for(Engine, "connect")
 def set_sqlite_pragma(dbapi_connection, connection_record):
+    # Only run for SQLite connections
+    # Check if the connection has 'execute' method directly (sqlite3) or via cursor
+    # But simpler is to check the module/type name
+    conn_type = type(dbapi_connection).__module__
+    if 'sqlite' not in conn_type:
+        return
+
     cursor = dbapi_connection.cursor()
-    cursor.execute("PRAGMA journal_mode=WAL")
-    cursor.close()
+    try:
+        cursor.execute("PRAGMA journal_mode=WAL")
+        cursor.close()
+    except:
+        pass
 
 class User(UserMixin, db.Model):
     id = db.Column(db.Integer, primary_key=True)
     username = db.Column(db.String(80), unique=True, nullable=False)
     email = db.Column(db.String(120), unique=True, nullable=True)
-    password_hash = db.Column(db.String(128))
+    password_hash = db.Column(db.String(256)) # Increased length for scrypt hashes
     is_admin = db.Column(db.Boolean, default=False)
     
     def set_password(self, password):

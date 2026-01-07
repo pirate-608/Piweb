@@ -2,8 +2,10 @@
 
 这是一个基于 C 语言核心逻辑和 Python Flask Web 界面的自动阅卷系统。支持命令行 (CLI) 和 Web 两种交互方式。
 
-## 🚀 最新优化 (v2.0)
+## 🚀 最新优化 (v2.1)
 
+*   🗄️ **企业级数据库**：目前默认支持 **PostgreSQL**，支持高并发读写，彻底解决 SQLite 的锁竞争问题。
+*   🛠️ **智能迁移**：提供 `migrate_to_postgres.py` 脚本，支持从旧版 SQLite 无缝迁移数据到 PostgreSQL。
 *   🛡️ **安全性增强**：全站启用 CSRF 防护，确保表单提交安全。
 *   📦 **离线支持**：Bootstrap 5 和 Chart.js 静态资源本地化，无需外网即可完整运行。
 *   🔄 **数据同步**：Web 端题库修改会自动同步到 C 语言核心数据文件 (`questions.txt`)，确保双端数据一致。
@@ -56,6 +58,16 @@ auto-grading-system/
 ```
 
 ## 快速开始
+
+### 🛠️ 前置准备 (数据库)
+
+本项目推荐使用 PostgreSQL。在启动应用前，请确保您已通过 Docker 启动了数据库实例：
+
+```powershell
+docker run --name pg-grading -e POSTGRES_PASSWORD=mysecretpassword -p 5432:5432 -d postgres
+```
+
+*注意：如果你想继续使用 SQLite，请修改 `scripts/deploy_*.ps1` 脚本，注释掉 `PostgreSQL` 相关的环境变量配置。*
 
 ### 方式一：本地开发/测试 (Local)
 
@@ -177,7 +189,22 @@ python web/wsgi.py
 为了在个人电脑上获得最佳并发性能，项目已进行以下配置：
 *   **动态并发**: `web/wsgi.py` 会根据您的 CPU 核心数自动调整工作线程 (策略: `CPU核数 * 2`，上限 24)。
 *   **内存保护**: `web/utils/queue_manager.py` 内置自动清理机制，定期移除陈旧的任务记录，防止内存溢出。
-*   **DB 优化**: 数据库已开启 SQLite WAL (Write-Ahead Logging) 模式，大幅提升并发读写吞吐量。
+*   **高性能 DB**: 切换至 **PostgreSQL** 后，配合连接池 (SQLAlchemy Pool) 可支持数百人同时在线考试，无需担心 `database is locked` 错误。
+
+## 🔄 数据库迁移指南 (Upgrade)
+
+如果您是从 v2.0 (SQLite) 升级上来的用户，请按照以下步骤迁移数据：
+
+1.  **启动 Postgres 容器** (参考"前置准备")。
+2.  **运行迁移脚本**：
+    ```powershell
+    .\.venv\Scripts\Activate
+    python scripts/migrate_to_postgres.py
+    ```
+3.  **按提示操作**：
+    *   脚本会自动检测本地的 `data.db` (SQLite)。
+    *   回车确认 Postgres 连接地址 (默认: `postgresql://postgres:mysecretpassword@localhost:5432/postgres`)。
+    *   脚本会自动创建新表并将用户、题目、成绩等数据导入 Postgres。
 
 ## 常见问题
 
@@ -189,9 +216,9 @@ A: 请确保使用 `deploy_public.bat` 启动，或者直接运行 `python wsgi.
 
 **Q: 如何支持更多人同时考试？**
 A: 当前配置适合班级内部使用。如需支持更大规模并发（>50人），建议：
-1.  修改 `wsgi.py` 中的 `threads` 参数。
-2.  开启 SQLite 的 WAL 模式 (`PRAGMA journal_mode=WAL;`)。
-3.  将数据库迁移至 MySQL/PostgreSQL。
+1.  确保已切换至 PostgreSQL 数据库 (默认配置)。
+2.  修改 `wsgi.py` 中的 `threads` 参数，增加工作线程数。
+3.  如果使用 Docker 部署，适当增加容器的 CPU/内存限额。
 
 ## 打包发布 (Windows / Linux / macOS)
 

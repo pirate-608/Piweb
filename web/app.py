@@ -43,7 +43,8 @@ login_manager.init_app(app)
 login_manager.login_view = 'login'
 
 data_manager = DataManager(Config)
-data_manager.init_db(app)
+if not os.environ.get('SKIP_INIT_DB'):
+    data_manager.init_db(app)
 
 @login_manager.user_loader
 def load_user(user_id):
