@@ -1,0 +1,48 @@
+version: '3.8'
+
+services:
+  web:
+    build: .
+    ports:
+      - "8080:8080"
+    environment:
+      - DATABASE_URL=postgresql://postgres:postgres@db:5432/grading_system
+    depends_on:
+      - db
+    volumes:
+      # Mount questions.txt so updates persist to host
+      - ./questions.txt:/app/questions.txt
+      # Mount uploads directory for images
+      - ./web/static/uploads:/app/web/static/uploads
+      # Mount logs/config if needed (optional)
+
+  db:
+    image: postgres:15-alpine
+    restart: always
+    environment:
+      - POSTGRES_USER=postgres
+      - POSTGRES_PASSWORD=postgres
+      - POSTGRES_DB=grading_system
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    ports:
+      # Expose to host to allow running migration script from host if needed
+      # Note: If you have a local postgres running on 5432, change the first number (e.g. "5433:5432")
+      - "5432:5432"
+
+  tunnel:
+    build:
+      context: .
+      dockerfile: Dockerfile.tunnel
+    restart: always
+    # "service:web" 模式让 tunnel 容器共享 web 容器的网络栈
+    # 这样 tunnel 里的 localhost:8080 就直接指向 web 应用
+    network_mode: service:web
+    depends_on:
+      - web
+    volumes:
+      # 挂载 token 文件，这样修改 token 不需要重新构建镜像
+      - ./tunnel_token.txt:/app/tunnel_token.txt
+
+volumes:
+  postgres_data:

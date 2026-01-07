@@ -1,0 +1,14 @@
+FROM alpine:latest
+
+# 安装必要依赖 (curl用于下载, libc6-compat用于运行二进制)
+RUN apk add --no-cache curl libc6-compat
+
+# 下载 Cloudflared Linux版 (使用 gh-proxy 加速)
+RUN curl -L --output /usr/local/bin/cloudflared https://gh-proxy.com/https://github.com/cloudflare/cloudflared/releases/latest/download/cloudflared-linux-amd64 && \
+    chmod +x /usr/local/bin/cloudflared
+
+WORKDIR /etc/cloudflared
+
+# 启动命令: 读取token文件并启动隧道 (强制 http2)
+# 注意: 这里使用 sh -c 是为了能执行 cat 命令读取文件内容
+CMD ["sh", "-c", "if [ -f /app/tunnel_token.txt ]; then token=$(cat /app/tunnel_token.txt | tr -d '[:space:]'); echo 'Starting tunnel with token...'; cloudflared tunnel run --protocol http2 --token $token; else echo 'Error: tunnel_token.txt not found'; exit 1; fi"]

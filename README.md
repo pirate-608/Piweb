@@ -59,61 +59,66 @@ auto-grading-system/
 
 ## 快速开始
 
-### 🛠️ 前置准备 (数据库)
+### 方式一：Docker 容器化部署 (推荐 - Recommended)
 
-本项目推荐使用 PostgreSQL。在启动应用前，请确保您已通过 Docker 启动了数据库实例：
+这是最稳定、环境最一致的运行方式，适合生产环境或希望快速体验的用户。
 
-```powershell
-docker run --name pg-grading -e POSTGRES_PASSWORD=mysecretpassword -p 5432:5432 -d postgres
-```
+1.  **启动服务**:
+    在项目根目录下打开终端，运行：
+    ```powershell
+    docker-compose up -d --build
+    ```
+    *系统会自动构建 Web 容器、启动 PostgreSQL 数据库，并完成初始化。*
 
-*注意：如果你想继续使用 SQLite，请修改 `scripts/deploy_*.ps1` 脚本，注释掉 `PostgreSQL` 相关的环境变量配置。*
+2.  **访问应用**:
+    打开浏览器访问 [http://localhost:8080](http://localhost:8080)。
+    *   默认管理员账号: `admin` / `admin123`
 
-### 方式一：本地开发/测试 (Local)
+### 方式二：本地脚本部署 (Legacy / Local Dev)
 
-进入 `scripts` 目录，双击运行 **`deploy_local.bat`** (会自动调用 PowerShell 版本的脚本)。
-该脚本会自动完成环境初始化，并提供以下菜单：
-1.  **Run Web Interface (Dev Mode)**: 启动开发版 Web 服务。
-2.  **Run CLI Mode**: 启动命令行版阅卷系统。
-3.  **Rebuild C Core**: 重新编译 C 语言核心库。
+如果您需要在 Windows 本地直接运行代码进行开发调试：
 
-### 方式二：公网部署 (Public / Production)
+1.  **启动数据库**: 您仍需先启动一个 Postgres 实例，或者修改配置使用 SQLite。
+    ```powershell
+    docker run --name pg-grading -e POSTGRES_PASSWORD=postgres -p 5432:5432 -d postgres:15-alpine
+    ```
 
-进入 `scripts` 目录，双击运行 **`deploy_public.bat`** (会自动调用 PowerShell 版本的脚本)。
-该脚本会自动安装生产级服务器 (Waitress) 并启动服务 (端口 8080)。
+2.  **运行脚本**:
+    进入 `scripts` 目录，双击运行 **`deploy_local.bat`** (会自动调用 PowerShell 版本的脚本)。
+    该脚本会自动完成环境初始化，并提供开发菜单。
+
+### 方式三：公网部署脚本 (Legacy)
+
+进入 `scripts` 目录，双击运行 **`deploy_public.bat`**。
+*注意：此脚本是在本机直接运行 Web 服务，如果您已经使用了 Docker 方式，请勿同时运行此脚本，否则会发生端口冲突。*
 
 **🌐 如何配置 Cloudflare Tunnel (外网访问)**
 
-为了获得稳定的公网访问地址（自定义域名），建议使用 **Token 认证模式**，而不是临时的 Quick Tunnel。
+为了获得稳定的公网访问地址，并配合 Docker 部署使用，请按照以下步骤操作。
+
+**⚠️ 重要提示**：在部分网络环境（如校园网、公司内网）中，默认的 QUIC 协议可能被屏蔽，导致隧道无法连接。请**务必**加上 `--protocol http2` 参数。
 
 1.  **准备环境**:
     *   下载 Windows 版 [cloudflared.exe](https://github.com/cloudflare/cloudflared/releases)。
     *   将 `cloudflared.exe` 放入项目根目录 (`auto-grading-system/`)。
 
-2.  **配置隧道 (推荐 - Token 模式)**:
+2.  **配置隧道 (Token 模式)**:
     *   登录 [Cloudflare Zero Trust Dashboard](https://one.dash.cloudflare.com/)。
     *   转到 **Networks > Tunnels**，点击 **Create a tunnel**。
     *   选择 **Cloudflared** 连接器类型。
-    *   给隧道起个名字 (例如 `my-grading-system`) 并保存。
-    *   在 "Install and run a connector" 页面，你会看到一段安装命令。**复制其中 `--token` 后面的那串长字符** (或者复制整个命令，提取 token 部分)。
-    *   在项目根目录下创建一个名为 **`tunnel_token.txt`** 的文件。
-    *   将刚刚复制的 token **粘贴**进去 (文件中只保留这一行 token 字符串)。
-    *   在 Cloudflare Dashboard 中继续点击 **Next**，配置 **Public Hostname**：
-        *   Domain: 选择你的域名 (例如 `67656.fun`)。
-        *   Subdomain: (可选，例如 `exam`)。
-        *   Service: `HTTP` : `localhost:8080`。
+    *   在 "Install and run a connector" 页面，**复制 `--token` 后面的那串长字符**。
+    *   在项目根目录下创建一个名为 **`tunnel_token.txt`** 的文件，将 token **粘贴**进去。
+    *   配置 **Public Hostname** (Service: `HTTP` : `localhost:8080`)。
 
-3.  **启动服务**:
-    *   运行 `deploy_public.bat`。
-    *   脚本会自动检测 `tunnel_token.txt` 并启动正式隧道。
-    *   现在你可以通过你配置的域名 (例如 `https://exam.67656.fun`) 访问系统了。
+3.  **启动隧道 (配合 Docker)**:
+    您的 Web 服务已经在 Docker 中运行 (localhost:8080)，现在只需单独启动隧道：
+    ```powershell
+    # 推荐：强制使用 HTTP2 协议，避免 UDP/QUIC 被阻断
+    .\cloudflared.exe tunnel run --protocol http2 --token (Get-Content tunnel_token.txt)
+    ```
 
-4.  **备用方案 (本地已登录)**:
-    *   如果你已经在本地通过 `cloudflared login` 登录过。
-    *   可以在 **`tunnel_name.txt`** 文件中填入你的隧道名称 (例如 `Fishing-rod`)。
-    *   脚本也会优先读取该配置。
-
-*注意：如果没有任何配置文件，脚本会询问是否开启临时的随机域名隧道（`trycloudflare.com`），但这不适合正式使用。*
+4.  **旧版脚本说明**:
+    如果您没有使用 Docker，而是使用 `scripts/deploy_public.ps1`，该脚本也已更新支持自动添加 http2 参数。
 
 ## 用户指南 (Web 版)
 
@@ -150,9 +155,11 @@ docker run --name pg-grading -e POSTGRES_PASSWORD=mysecretpassword -p 5432:5432 
 
 | 操作目标 | 命令 | 说明 |
 | :--- | :--- | :--- |
-| **启动/重启 (公网)** | `Stop-Process -Name cloudflared, python -Force -ErrorAction SilentlyContinue; .\scripts\deploy_public.ps1` | **推荐**。自动清理旧进程并重新启动服务和隧道。 |
-| **启动 (本地开发)** | `.\scripts\deploy_local.ps1` | 启动交互式菜单，用于本地开发调试或运行 CLI 版。 |
-| **强制停止所有服务** | `Stop-Process -Name cloudflared, python -Force` | 立即终止服务器和隧道进程。 |
+| **Docker 启动/更新** | `docker-compose up -d --build` | **推荐**。自动构建并运行所有服务。 |
+| **Docker 重启应用** | `docker-compose restart web` | 仅重启 Web 容器 (常用于数据库迁移后)。 |
+| **Docker 停止** | `docker-compose down` | 停止并移除所有容器。 |
+| **启动隧道** | `.\cloudflared.exe ...` | 见上文说明。 |
+| **(Legacy) 脚本启动** | `.\scripts\deploy_public.ps1` | 旧版一键脚本。 |
 
 ### 2. 手动分步启动
 
@@ -203,7 +210,7 @@ python web/wsgi.py
     ```
 3.  **按提示操作**：
     *   脚本会自动检测本地的 `data.db` (SQLite)。
-    *   回车确认 Postgres 连接地址 (默认: `postgresql://postgres:mysecretpassword@localhost:5432/postgres`)。
+    *   回车确认 Postgres 连接地址 (默认: `postgresql://postgres:postgres@localhost:5432/grading_system`)。
     *   脚本会自动创建新表并将用户、题目、成绩等数据导入 Postgres。
 
 ## 常见问题

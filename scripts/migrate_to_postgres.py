@@ -109,7 +109,8 @@ def save_to_postgres(data, pg_uri):
 
 if __name__ == "__main__":
     # 1. Get Target DB URI
-    default_pg = "postgresql://postgres:mysecretpassword@localhost:5432/postgres"
+    # Default matches docker-compose.yml config
+    default_pg = "postgresql://postgres:postgres@localhost:5432/grading_system"
     print("="*60)
     print(" SQLite to PostgreSQL Migration Tool")
     print("="*60)

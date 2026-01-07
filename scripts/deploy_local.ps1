@@ -18,7 +18,7 @@ $env:Path = "$PWD\.venv\Scripts;$env:Path"
 
 # Database Configuration (PostgreSQL)
 # If you want to switch back to SQLite, comment out the following line
-$env:DATABASE_URL = "postgresql://postgres:mysecretpassword@localhost:5432/postgres"
+$env:DATABASE_URL = "postgresql://postgres:postgres@localhost:5432/grading_system"
 
 function Show-Menu {
     Clear-Host

@@ -26,16 +26,25 @@ else
     endif
 endif
 
+ifneq ($(OS),Windows_NT)
+    UNAME_S := $(shell uname -s)
+    
+    # If Linux, link against math library securely
+    ifeq ($(UNAME_S),Linux)
+        LDFLAGS = -lm
+    endif
+endif
+
 TARGET = $(BUILD_DIR)/auto_grader$(TARGET_EXT)
 LIB_TARGET = $(BUILD_DIR)/libgrading$(LIB_EXT)
 
 all: $(TARGET) $(LIB_TARGET)
 
 $(TARGET): $(OBJ) | $(BUILD_DIR)
-	$(CC) $(OBJ) -o $(TARGET)
+	$(CC) $(OBJ) -o $(TARGET) $(LDFLAGS)
 
 $(LIB_TARGET): src/grading.c include/common.h | $(BUILD_DIR)
-	$(CC) -shared -o $(LIB_TARGET) src/grading.c -Iinclude
+	$(CC) $(CFLAGS) -shared -o $(LIB_TARGET) src/grading.c -Iinclude $(LDFLAGS)
 
 $(BUILD_DIR):
 	$(MKDIR)

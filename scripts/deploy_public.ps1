@@ -18,7 +18,7 @@ $env:Path = "$PWD\.venv\Scripts;$env:Path"
 
 # Database Configuration (PostgreSQL)
 # If you want to switch back to SQLite, comment out the following line
-$env:DATABASE_URL = "postgresql://postgres:mysecretpassword@localhost:5432/postgres"
+$env:DATABASE_URL = "postgresql://postgres:postgres@localhost:5432/grading_system"
 
 Write-Host "`n==========================================" -ForegroundColor Cyan
 Write-Host "     Auto Grading System - Public Deploy" -ForegroundColor Cyan
@@ -58,13 +58,14 @@ if (Test-Path "cloudflared.exe") {
             Write-Host "[INFO] Found tunnel_token.txt, starting custom domain tunnel..." -ForegroundColor Green
             $token = Get-Content "tunnel_token.txt" -Raw
             $token = $token.Trim()
-            Start-Process -FilePath ".\cloudflared.exe" -ArgumentList "tunnel", "run", "--token", "$token" -NoNewWindow:$false
+            # Added --protocol http2 to avoid QUIC timeout issues (common in restricted networks)
+            Start-Process -FilePath ".\cloudflared.exe" -ArgumentList "tunnel", "run", "--protocol", "http2", "--token", "$token" -NoNewWindow:$false
         } elseif (Test-Path "tunnel_name.txt") {
              # Support running by name if configured locally
             $name = Get-Content "tunnel_name.txt" -Raw
             $name = $name.Trim()
             Write-Host "[INFO] Found tunnel_name.txt, starting tunnel named '$name'..." -ForegroundColor Green
-            Start-Process -FilePath ".\cloudflared.exe" -ArgumentList "tunnel", "run", "$name" -NoNewWindow:$false
+            Start-Process -FilePath ".\cloudflared.exe" -ArgumentList "tunnel", "run", "--protocol", "http2", "$name" -NoNewWindow:$false
         } else {
             Write-Host "[INFO] No Tunnel configuration found." -ForegroundColor Yellow
             Write-Host "       To use your custom domain (Recommended):"
@@ -74,7 +75,7 @@ if (Test-Path "cloudflared.exe") {
             
             $yn = Read-Host "Do you want to start a temporary Quick Tunnel with a random URL? (Y/N)"
             if ($yn -eq "Y" -or $yn -eq "y") {
-                Start-Process -FilePath ".\cloudflared.exe" -ArgumentList "tunnel", "--url", "http://localhost:8080" -NoNewWindow:$false
+                Start-Process -FilePath ".\cloudflared.exe" -ArgumentList "tunnel", "--protocol", "http2", "--url", "http://localhost:8080" -NoNewWindow:$false
                 Write-Host "[INFO] Cloudflare Tunnel started in a new window." -ForegroundColor Green
             } else {
                 Write-Host "[INFO] Skipping tunnel start. Web server will run locally only." -ForegroundColor Cyan
