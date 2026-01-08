@@ -1,8 +1,8 @@
 import os
 import json
 import shutil
-from datetime import datetime
-from models import db, Question, ExamResult, User, UserCategoryStat, UserPermission
+from datetime import datetime, timedelta
+from models import db, Question, ExamResult, User, UserCategoryStat, UserPermission, StardustHistory
 
 class DataManager:
     def __init__(self, config):
@@ -41,10 +41,23 @@ class DataManager:
                     if 'email' not in columns:
                         print("Migrating schema: Adding email column to user table")
                         with db.engine.connect() as conn:
-                            conn.execute(text("ALTER TABLE user ADD COLUMN email VARCHAR(120)"))
-                            # SQLite usually auto-commits DDL, but explicit commit doesn't hurt or might be needed depending on driver
+                            conn.execute(text('ALTER TABLE "user" ADD COLUMN email VARCHAR(120)'))
+                            conn.commit()
             except Exception as e:
                 print(f"Schema migration error (email column): {e}")
+
+            # Schema Migration: Check for stardust column in user table
+            try:
+                from sqlalchemy import inspect, text
+                inspector = inspect(db.engine)
+                columns = [c['name'] for c in inspector.get_columns('user')]
+                if 'stardust' not in columns:
+                    print("Migrating schema: Adding stardust column to user table")
+                    with db.engine.connect() as conn:
+                        conn.execute(text('ALTER TABLE "user" ADD COLUMN stardust INTEGER DEFAULT 0'))
+                        conn.commit()
+            except Exception as e:
+                print(f"Schema migration error (stardust column): {e}")
 
             # Performance Optimization: Ensure index exists on category
             try:
@@ -219,7 +232,8 @@ class DataManager:
         results = query.order_by(ExamResult.timestamp.desc()).all()
         return [r.to_dict() for r in results]
 
-    def save_exam_result(self, result_dict, user_id=None):
+    def save_exam_result(self, result_dict, user_id=None, category='all'):
+        print(f"[DataManager] Saving exam result: {result_dict['id']} for user: {user_id}")
         result = ExamResult(
             id=result_dict['id'],
             timestamp=result_dict['timestamp'],
@@ -228,8 +242,67 @@ class DataManager:
             user_id=user_id
         )
         result.details = result_dict['details']
-        db.session.add(result)
-        db.session.commit()
+        try:
+            db.session.add(result)
+            db.session.commit()
+            print(f"[DataManager] Successfully saved result {result_dict['id']}")
+            
+            # Award Stardust
+            if user_id:
+                score = result_dict['total_score']
+                max_s = result_dict['max_score']
+                self.award_stardust(user_id, category, score, max_s)
+                
+        except Exception as e:
+            db.session.rollback()
+            print(f"[DataManager] Error saving result: {e}")
+            raise e
+
+    def award_stardust(self, user_id, category, score, max_score):
+        if max_score <= 0: return
+        percentage = (score / max_score) * 100
+        
+        # Determine reward tier
+        reward = 0
+        if percentage >= 90: # Excellent
+            reward = 15
+        elif percentage >= 80: # Good
+            reward = 10
+        elif percentage >= 60: # Qualified
+            reward = 5
+            
+        if reward == 0:
+            return
+            
+        # Check 24h limit for this category
+        last_24h = datetime.utcnow() - timedelta(hours=24)
+        recent_entry = StardustHistory.query.filter(
+            StardustHistory.user_id == user_id,
+            StardustHistory.category == category,
+            StardustHistory.created_at >= last_24h
+        ).first()
+        
+        if recent_entry:
+            print(f"[Stardust] User {user_id} already rewarded for {category} in last 24h")
+            return
+            
+        # Award
+        try:
+            user = User.query.get(user_id)
+            if user:
+                user.stardust = (user.stardust or 0) + reward
+                history = StardustHistory(
+                    user_id=user_id,
+                    category=category,
+                    amount=reward,
+                    reason='exam_reward'
+                )
+                db.session.add(history)
+                db.session.commit()
+                print(f"[Stardust] User {user_id} earned {reward} stardust (Cat: {category})")
+        except Exception as e:
+            print(f"[Stardust] Error: {e}")
+            db.session.rollback()
 
     def get_result(self, result_id):
         r = ExamResult.query.get(result_id)
@@ -373,6 +446,8 @@ class DataManager:
                 global_leaderboard.append({
                     'user_id': user.id,
                     'username': user.username,
+                    'stardust': user.stardust,
+                    'level_info': user.level_info,
                     'accuracy': round(accuracy, 1),
                     'total_exams': sum(s.total_attempts for s in stats)
                 })
@@ -392,6 +467,8 @@ class DataManager:
                     leaderboard.append({
                         'user_id': stat.user_id,
                         'username': stat.user.username,
+                        'stardust': stat.user.stardust,
+                        'level_info': stat.user.level_info,
                         'accuracy': round(acc, 1),
                         'attempts': stat.total_attempts
                     })

@@ -6,7 +6,8 @@ from datetime import datetime
 from flask import Blueprint, render_template, request, redirect, url_for, flash, current_app, abort
 from flask_login import login_required, current_user
 from werkzeug.utils import secure_filename
-from models import db, Board, Topic, Post, TopicLike, PostLike, TopicView
+from extensions import db, data_manager
+from models import Board, Topic, Post, TopicLike, PostLike, TopicView
 from config import Config
 
 forum_bp = Blueprint('forum', __name__, url_prefix='/forum')

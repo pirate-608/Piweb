@@ -20,6 +20,13 @@
                     <div class="col-md-4 text-center mb-3">
                         <div class="display-1 text-primary"><i class="bi bi-person-bounding-box"></i></div>
                         <h3 class="mt-2">{{ current_user.username }}</h3>
+                        <div class="mb-1 text-muted fw-bold">星尘: {{ current_user.stardust or 0 }}</div>
+                        <div class="mb-2">
+                            {% set level_title, level_color = current_user.level_info %}
+                            <span class="{{ level_color }} fw-bold border rounded px-2 py-1 small" title="星尘: {{ current_user.stardust or 0 }}">
+                                <i class="bi bi-stars"></i> {{ level_title }}
+                            </span>
+                        </div>
                         <span class="badge bg-{{ 'danger' if current_user.is_admin else 'success' }}">
                             {{ '管理员' if current_user.is_admin else '普通用户' }}
                         </span>
@@ -30,7 +37,7 @@
                             <div class="col-4">
                                 <div class="p-2 border rounded bg-light">
                                     <h3 class="text-primary">{{ overall_stats.total_exams }}</h3>
-                                    <small class="text-muted">考试次数</small>
+                                    <small class="text-muted">答题次数</small>
                                 </div>
                             </div>
                             <div class="col-4">
@@ -99,7 +106,7 @@
                     <!-- Edit Profile Tab -->
                     <div class="tab-pane fade show active" id="edit" role="tabpanel">
                         <h4 class="mb-3">修改资料</h4>
-                        <form method="POST" action="{{ url_for('profile') }}">
+                        <form method="POST" action="{{ url_for('main.profile') }}">
                     <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
                     
                     <div class="mb-3">
@@ -159,7 +166,7 @@
                         {% for post in my_posts %}
                         <a href="{{ url_for('forum.view_topic', topic_id=post.topic.id) }}" class="list-group-item list-group-item-action">
                             <div class="d-flex w-100 justify-content-between">
-                                <h6 class="mb-1 text-dark text-truncate" style="max-width: 80%;">{{ post.content|striptags }}</h6>
+                                <h6 class="mb-1 text-primary text-truncate" style="max-width: 80%;">{{ post.content|striptags }}</h6>
                                 <small class="text-muted">{{ post.created_at.strftime('%Y-%m-%d') }}</small>
                             </div>
                             <small class="text-muted">回复于: {{ post.topic.title }}</small>
@@ -181,7 +188,7 @@
                             <div class="d-flex w-100 justify-content-between">
                                 <div>
                                     <span class="badge bg-info text-dark position-relative" style="z-index: 2;">
-                                        <a href="{{ url_for('user_profile', user_id=post.user.id) }}" class="text-dark text-decoration-none">{{ post.user.username }}</a>
+                                        <a href="{{ url_for('main.user_profile', user_id=post.user.id) }}" class="text-dark text-decoration-none">{{ post.user.username }}</a>
                                     </span>
                                     <span class="text-dark ms-2">{{ post.content|striptags }}</span>
                                 </div>

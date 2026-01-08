@@ -4,7 +4,7 @@
 <div class="container py-5">
     <div class="text-center mb-5">
         <h1 class="display-5 fw-bold">选择题目集</h1>
-        <p class="lead text-muted">请选择您要参加的考试科目或类别</p>
+        <p class="lead text-muted">请选择您要参加的答题科目或类别</p>
     </div>
 
     <div class="row row-cols-1 row-cols-md-3 g-4">
@@ -15,7 +15,7 @@
                     <h3 class="card-title text-primary">📚 综合测试</h3>
                     <p class="card-text mt-3">包含所有类别的题目，随机抽取。</p>
                     <p class="text-muted">共 {{ total_count }} 题</p>
-                    <a href="{{ url_for('exam', category='all') }}" class="btn btn-primary btn-lg mt-auto">开始综合考试</a>
+                    <a href="{{ url_for('exam.exam', category='all') }}" class="btn btn-primary btn-lg mt-auto">开始综合答题</a>
                 </div>
             </div>
         </div>
@@ -28,7 +28,7 @@
                     <h3 class="card-title">{{ cat }}</h3>
                     <p class="card-text mt-3">针对 {{ cat }} 的专项练习。</p>
                     <p class="text-muted">共 {{ count }} 题</p>
-                    <a href="{{ url_for('exam', category=cat) }}" class="btn btn-outline-primary btn-lg mt-auto">开始 {{ cat }} 考试</a>
+                    <a href="{{ url_for('exam.exam', category=cat) }}" class="btn btn-outline-primary btn-lg mt-auto">开始 {{ cat }} 答题</a>
                 </div>
             </div>
         </div>

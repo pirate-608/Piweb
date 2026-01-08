@@ -5,11 +5,11 @@
     <div class="col-md-12">
         <div class="d-flex justify-content-between align-items-center mb-4">
             <h2>👤 用户管理</h2>
-            <form action="{{ url_for('admin_users') }}" method="get" class="d-flex">
+            <form action="{{ url_for('admin.users') }}" method="get" class="d-flex">
                 <input type="text" name="q" class="form-control me-2" placeholder="搜索用户名..." value="{{ search_query|default('') }}" style="color: black; background-color: white;">
                 <button class="btn btn-primary" type="submit">搜索</button>
                 {% if search_query %}
-                <a href="{{ url_for('admin_users') }}" class="btn btn-outline-secondary ms-2">清除</a>
+                <a href="{{ url_for('admin.users') }}" class="btn btn-outline-secondary ms-2">清除</a>
                 {% endif %}
             </form>
         </div>
@@ -33,7 +33,7 @@
                             <tr>
                                 <td>{{ user.id }}</td>
                                 <td>
-                                    <strong><a href="{{ url_for('admin_user_detail', user_id=user.id) }}" class="text-decoration-none">{{ user.username }}</a></strong>
+                                    <strong><a href="{{ url_for('admin.user_detail', user_id=user.id) }}" class="text-decoration-none">{{ user.username }}</a></strong>
                                 </td>
                                 <td>
                                     {% if user.is_admin %}
@@ -69,14 +69,14 @@
                                 <td>
                                     {% if not user.is_admin %}
                                     <div class="btn-group btn-group-sm">
-                                        <form action="{{ url_for('admin_user_action', user_id=user.id) }}" method="post" class="d-inline">
+                                        <form action="{{ url_for('admin.user_action', user_id=user.id) }}" method="post" class="d-inline">
                                             <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
                                             <input type="hidden" name="action" value="toggle_ban">
                                             <button type="submit" class="btn {{ 'btn-dark' if not user.is_banned else 'btn-outline-dark' }}" onclick="return confirm('确定修改封禁状态？')">
                                                 {{ '🚫 封禁' if not user.is_banned else '✅ 解封' }}
                                             </button>
                                         </form>
-                                        <form action="{{ url_for('admin_user_action', user_id=user.id) }}" method="post" class="d-inline ms-1">
+                                        <form action="{{ url_for('admin.user_action', user_id=user.id) }}" method="post" class="d-inline ms-1">
                                             <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
                                             <input type="hidden" name="action" value="toggle_mute">
                                             <button type="submit" class="btn {{ 'btn-warning' if not user.is_muted else 'btn-outline-warning' }}">

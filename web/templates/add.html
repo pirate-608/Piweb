@@ -2,7 +2,7 @@
 
 {% block content %}
 <h2 class="mb-4">批量添加题目</h2>
-<form method="POST" action="/add" id="addForm" enctype="multipart/form-data">
+<form method="POST" action="{{ url_for('admin.add') }}" id="addForm" enctype="multipart/form-data">
     <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
     <div id="questions-container">
         <div class="card mb-3 question-item">

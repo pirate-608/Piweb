@@ -2,7 +2,7 @@
 
 {% block content %}
 <div class="d-flex justify-content-between align-items-center mb-4 sticky-top bg-white py-3 border-bottom">
-    <h2 class="mb-0">在线考试</h2>
+    <h2 class="mb-0">在线答题</h2>
     {% if remaining_sec is defined %}
     <div class="alert alert-primary mb-0 py-2 shadow-sm">
         ⏳ 剩余时间：<span id="timer" class="fw-bold fs-5">加载中...</span>
@@ -10,7 +10,7 @@
     {% endif %}
 </div>
 
-<form method="POST" action="/exam">
+<form method="POST" action="{{ url_for('exam.exam') }}">
     <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
     {% for q in questions %}
     <div class="card mb-3">
@@ -21,7 +21,7 @@
             <h5 class="card-title" style="white-space: pre-wrap;">{{ q.content }}</h5>
             {% if q.image %}
             <div class="mb-3">
-                <img src="{{ url_for('uploaded_file', filename=q.image) }}" class="img-fluid rounded" style="max-height: 300px;" alt="题目图片">
+                <img src="{{ url_for('main.uploaded_file', filename=q.image) }}" class="img-fluid rounded" style="max-height: 300px;" alt="题目图片">
             </div>
             {% endif %}
             <div class="mb-3">
@@ -34,12 +34,12 @@
     <div class="alert alert-warning">
         <h4>题库为空</h4>
         <p>目前还没有题目，请先去添加题目吧！</p>
-        <a href="{{ url_for('index') }}" class="btn btn-primary">返回首页</a>
+        <a href="{{ url_for('main.index') }}" class="btn btn-primary">返回首页</a>
     </div>
     {% endfor %}
     
     {% if questions %}
-    <button type="submit" class="btn btn-success btn-lg">提交试卷</button>
+    <button type="submit" class="btn btn-success btn-lg">提交</button>
     {% endif %}
 </form>
 
@@ -54,7 +54,7 @@
 
         // 2. 防止意外刷新/关闭
         window.onbeforeunload = function() {
-            return "您正在考试中，确定要离开吗？您的进度已保存在本地。";
+            return "您正在答题中，确定要离开吗？您的进度已保存在本地。";
         };
 
         // 3. 表单自动缓存
@@ -95,7 +95,7 @@
                 // 避免重复提交
                 if (!window.isSubmitting) {
                     window.isSubmitting = true;
-                    alert("考试时间到！系统将自动提交试卷。");
+                    alert("答题时间到！系统将自动提交试卷。");
                     window.onbeforeunload = null; // 允许提交
                     document.querySelector('form').submit();
                 }

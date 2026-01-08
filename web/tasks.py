@@ -128,7 +128,9 @@ def grade_exam_task(self, user_id, data):
     
     # Save exam result and update stats
     # Note: data_manager methods might use db.session, so they are covered by 'ContextTask' in celery_utils
-    data_manager.save_exam_result(exam_record, user_id=user_id)
+    # Pass category for stardust calculation
+    exam_category = data.get('category', 'all')
+    data_manager.save_exam_result(exam_record, user_id=user_id, category=exam_category)
     data_manager.update_user_stats(user_id, results)
     
     # Notify completion

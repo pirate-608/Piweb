@@ -27,7 +27,7 @@
                                 <th>#</th>
                                 <th>用户</th>
                                 <th>平均正确率</th>
-                                <th>考试次数</th>
+                                <th>答题次数</th>
                             </tr>
                         </thead>
                         <tbody>
@@ -40,7 +40,9 @@
                                     {% else %}{{ loop.index }}{% endif %}
                                 </td>
                                 <td>
-                                    <a href="{{ url_for('user_profile', user_id=user['user_id']) }}" class="text-decoration-none fw-bold" style="color: #0d6efd;">
+                                    {% set level_title, level_color = user['level_info'] %}
+                                    <span class="{{ level_color }} small me-1" title="{{ level_title }}">[<i class="bi bi-stars"></i>{{ level_title }}]</span>
+                                    <a href="{{ url_for('main.user_profile', user_id=user['user_id']) }}" class="text-decoration-none fw-bold" style="color: #0d6efd;">
                                         {{ user['username'] }}
                                     </a>
                                 </td>
@@ -82,7 +84,9 @@
                             <tr>
                                 <td>{{ loop.index }}</td>
                                 <td>
-                                    <a href="{{ url_for('user_profile', user_id=user['user_id']) }}" class="text-decoration-none fw-bold" style="color: #0d6efd;">
+                                    {% set level_title, level_color = user['level_info'] %}
+                                    <span class="{{ level_color }} small me-1" title="{{ level_title }}">[<i class="bi bi-stars"></i>{{ level_title }}]</span>
+                                    <a href="{{ url_for('main.user_profile', user_id=user['user_id']) }}" class="text-decoration-none fw-bold" style="color: #0d6efd;">
                                         {{ user['username'] }}
                                     </a>
                                 </td>

@@ -7,13 +7,13 @@
         <p class="col-md-8 fs-4 text-muted">守夜人之窗 —— 致力于为67656个用户开发的线上夜空。</p>
         <div class="d-grid gap-2 d-md-flex justify-content-md-start mt-4">
             {% if current_user.is_authenticated %}
-                <a href="/start_exam" class="btn btn-outline-light btn-lg px-4 me-md-2">⚔️ 开始试炼</a>
+                <a href="{{ url_for('exam.start_exam') }}" class="btn btn-outline-light btn-lg px-4 me-md-2">⚔️ 开始试炼</a>
                 {% if current_user.is_admin %}
-                    <a href="/add" class="btn btn-outline-secondary btn-lg px-4">📜 发布任务</a>
+                    <a href="{{ url_for('admin.add') }}" class="btn btn-outline-secondary btn-lg px-4">📜 发布任务</a>
                 {% endif %}
             {% else %}
-                <a href="{{ url_for('login') }}" class="btn btn-outline-light btn-lg px-4 me-md-2">登录</a>
-                <a href="{{ url_for('register') }}" class="btn btn-outline-secondary btn-lg px-4">注册</a>
+                <a href="{{ url_for('auth.login') }}" class="btn btn-outline-light btn-lg px-4 me-md-2">登录</a>
+                <a href="{{ url_for('auth.register') }}" class="btn btn-outline-secondary btn-lg px-4">注册</a>
             {% endif %}
         </div>
     </div>
@@ -36,7 +36,7 @@
             {% if current_user.is_admin %}
             <div class="collapse" id="editAnnouncementForm">
                 <div class="card-body border-bottom bg-light">
-                    <form action="{{ url_for('update_announcement') }}" method="post">
+                    <form action="{{ url_for('admin.update_announcement') }}" method="post">
                         <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
                         <div class="mb-3">
                             <label for="announcementContent" class="form-label">公告内容 (支持 HTML)</label>
@@ -81,7 +81,7 @@
             {% if current_user.is_admin %}
             <div class="collapse" id="editGuideForm">
                 <div class="card-body border-bottom bg-light">
-                    <form action="{{ url_for('update_guide') }}" method="post">
+                    <form action="{{ url_for('admin.update_guide') }}" method="post">
                         <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
                         <div class="mb-3">
                             <label for="guideContent" class="form-label">指南内容 (支持 HTML)</label>
@@ -123,13 +123,13 @@
     <div class="col-md-4">
         <div class="card text-white bg-success mb-3 h-100">
             {% if current_user.is_authenticated and user_stats %}
-                <div class="card-header">我的考试</div>
+                <div class="card-header">我的答题</div>
                 <div class="card-body">
                     <h1 class="card-title display-4">{{ user_stats.total_exams }}</h1>
                     <p class="card-text">次个人记录</p>
                 </div>
             {% else %}
-                <div class="card-header">全站总考试次数</div>
+                <div class="card-header">全站总答题次数</div>
                 <div class="card-body">
                     <h1 class="card-title display-4">{{ stats.total_exams }}</h1>
                     <p class="card-text">次全站记录</p>
@@ -228,7 +228,7 @@ document.addEventListener('DOMContentLoaded', () => {
             data: {
                 labels: {{ user_charts.trend.labels | tojson }},
                 datasets: [{
-                    label: '考试得分',
+                    label: '答题得分',
                     data: {{ user_charts.trend.data | tojson }},
                     borderColor: 'rgb(75, 192, 192)',
                     backgroundColor: 'rgba(75, 192, 192, 0.2)',

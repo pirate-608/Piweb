@@ -52,7 +52,9 @@
         <div class="card-body">
             <div class="d-flex mb-3 align-items-center">
                 <div class="fw-bold me-3">
-                    <a href="{{ url_for('user_profile', user_id=topic.user.id) }}" class="text-decoration-none" style="color: #0d6efd;">
+                    {% set level_title, level_color = topic.user.level_info %}
+                    <span class="{{ level_color }} small me-1" title="{{ level_title }}">[<i class="bi bi-stars"></i>{{ level_title }}]</span>
+                    <a href="{{ url_for('main.user_profile', user_id=topic.user.id) }}" class="text-decoration-none" style="color: #0d6efd;">
                         <i class="bi bi-person-circle"></i> {{ topic.user.username }}
                     </a>
                 </div>
@@ -99,8 +101,10 @@
         <div class="card-body">
             <div class="d-flex justify-content-between mb-2 border-bottom pb-2">
                 <div>
+                    {% set level_title, level_color = post.user.level_info %}
+                    <span class="{{ level_color }} small me-1" title="{{ level_title }}">[<i class="bi bi-stars"></i>{{ level_title }}]</span>
                     <strong>
-                        <a href="{{ url_for('user_profile', user_id=post.user.id) }}" class="text-decoration-none" style="color: #0d6efd;">
+                        <a href="{{ url_for('main.user_profile', user_id=post.user.id) }}" class="text-decoration-none" style="color: #0d6efd;">
                             {{ post.user.username }}
                         </a>
                     </strong>
@@ -113,7 +117,7 @@
             
             {% if post.parent %}
             <div class="alert alert-secondary p-2 mb-2 small">
-                <i class="bi bi-reply-fill"></i> 回复 <strong><a href="{{ url_for('user_profile', user_id=post.parent.user.id) }}" class="text-decoration-none" style="color: #0d6efd;">{{ post.parent.user.username }}</a></strong>:
+                <i class="bi bi-reply-fill"></i> 回复 <strong><a href="{{ url_for('main.user_profile', user_id=post.parent.user.id) }}" class="text-decoration-none" style="color: #0d6efd;">{{ post.parent.user.username }}</a></strong>:
                 <div class="text-muted text-truncate">{{ post.parent.content }}</div>
             </div>
             {% endif %}

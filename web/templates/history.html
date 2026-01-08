@@ -7,15 +7,15 @@
     </div>
     <div class="col-md-6">
         <div class="d-flex justify-content-end gap-2">
-            <form action="{{ url_for('history') }}" method="get" class="d-flex">
+            <form action="{{ url_for('exam.history') }}" method="get" class="d-flex">
                 <input type="text" name="q" class="form-control me-2" placeholder="搜索用户或时间..." value="{{ search_query|default('') }}" style="color: black; background-color: white;">
                 <button class="btn btn-primary" type="submit">搜索</button>
                 {% if search_query %}
-                <a href="{{ url_for('history') }}" class="btn btn-outline-secondary ms-2">清除</a>
+                <a href="{{ url_for('exam.history') }}" class="btn btn-outline-secondary ms-2">清除</a>
                 {% endif %}
             </form>
             {% if results and not search_query %}
-            <a href="{{ url_for('export_history') }}" class="btn btn-success text-nowrap">
+            <a href="{{ url_for('exam.export_history') }}" class="btn btn-success text-nowrap">
                 📥 导出 CSV
             </a>
             {% endif %}
@@ -40,7 +40,13 @@
             {% for result in results %}
             <tr>
                 {% if current_user.is_admin %}
-                <td><a href="{{ url_for('user_profile', user_id=result.user_id) }}" class="text-decoration-none fw-bold" style="color: #0d6efd;">{{ result.username }}</a></td>
+                <td>
+                    {% set level_title, level_color = result.level_info %}
+                    {% if level_title %}
+                    <span class="{{ level_color }} small me-1" title="{{ level_title }}">[<i class="bi bi-stars"></i>{{ level_title }}]</span>
+                    {% endif %}
+                    <a href="{{ url_for('main.user_profile', user_id=result.user_id) }}" class="text-decoration-none fw-bold" style="color: #0d6efd;">{{ result.username }}</a>
+                </td>
                 {% endif %}
                 <td>{{ result.timestamp }}</td>
                 <td>
@@ -49,8 +55,8 @@
                     </span>
                 </td>
                 <td>
-                    <a href="{{ url_for('view_history', result_id=result.id) }}" class="btn btn-sm btn-info text-white">查看详情</a>
-                    <form action="{{ url_for('delete_history', result_id=result.id) }}" method="POST" class="d-inline" onsubmit="return confirm('确定要删除这条记录吗？');">
+                    <a href="{{ url_for('exam.view_history', result_id=result.id) }}" class="btn btn-sm btn-info text-white">查看详情</a>
+                    <form action="{{ url_for('exam.delete_history', result_id=result.id) }}" method="POST" class="d-inline" onsubmit="return confirm('确定要删除这条记录吗？');">
                         <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
                         <button type="submit" class="btn btn-sm btn-danger">删除</button>
                     </form>
@@ -65,6 +71,6 @@
 {% endif %}
 
 <div class="mt-3">
-    <a href="/" class="btn btn-secondary">返回首页</a>
+    <a href="{{ url_for('main.index') }}" class="btn btn-secondary">返回首页</a>
 </div>
 {% endblock %}

@@ -13,7 +13,7 @@
                 </div>
             </div>
 
-            <h5 class='card-title'>请稍候，系统正在处理您的试卷</h5>
+            <h5 class='card-title'>请稍候，系统正在处理您的答卷</h5>
             <p class='card-text' id='status-text'>正在连接实时评分服务...</p>
 
             <div class='progress mt-3' style='height: 20px;'>
@@ -32,18 +32,38 @@
 <script src='{{ url_for('static', filename='js/socket.io.min.js') }}'></script>
 <script>
     const taskId = '{{ task_id }}';
-    const statusUrl = '{{ url_for('queue_status', task_id=task_id) }}';
-    const resultUrl = '{{ url_for('view_history', result_id=task_id) }}';
+    const statusUrl = '{{ url_for('exam.queue_status', task_id=task_id) }}';
+    const resultUrl = '{{ url_for('exam.view_history', result_id=task_id) }}';
 
     // Initialize Socket
     // We connect to the current origin
     const socket = io();
+
+    function checkStatus() {
+        fetch(statusUrl)
+            .then(response => response.json())
+            .then(data => {
+                if (data.status === 'done') {
+                    document.getElementById('progress-bar-el').style.width = '100%';
+                    document.getElementById('status-text').innerText = '评分完成！正在跳转...';
+                    window.location.href = data.result_url || resultUrl;
+                } else if (data.status === 'error') {
+                    document.getElementById('status-text').innerText = '评分出错: ' + (data.error || '未知错误');
+                }
+            })
+            .catch(err => console.error(err));
+    }
+
+    // Check status immediately on load (handles refresh or late join)
+    checkStatus();
 
     socket.on('connect', () => {
         console.log('Connected to server');
         document.getElementById('status-text').innerText = '已连接到服务器，等待处理...';
         // Join the room for this task
         socket.emit('join', {room: taskId});
+        // Check status again after join, just in case
+        checkStatus();
     });
 
     socket.on('status', (data) => {
@@ -77,17 +97,10 @@
          document.getElementById('status-text').innerText = '连接断开，尝试重连...';
     });
 
-    // Fallback: Check standard HTTP API every 3s just in case Socket fails
+    // Fallback: Check standard HTTP API every 3s
+    // Also covers the case where socket events are missed
     setInterval(() => {
-        if (!socket.connected) {
-             fetch(statusUrl)
-            .then(response => response.json())
-            .then(data => {
-                if (data.status === 'done') {
-                     window.location.href = resultUrl;
-                }
-            });
-        }
+        checkStatus();
     }, 3000);
 </script>
 {% endblock %}

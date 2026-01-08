@@ -144,7 +144,8 @@ class GradingQueue:
                         'max_score': result['max_score'],
                         'details': result['details']
                     }
-                    self.data_manager.save_exam_result(exam_record, user_id=task['user_id'])
+                    cat = task['data'].get('category', 'all')
+                    self.data_manager.save_exam_result(exam_record, user_id=task['user_id'], category=cat)
                     self.data_manager.update_user_stats(task['user_id'], result['details'])
                 
                 task['result'] = result

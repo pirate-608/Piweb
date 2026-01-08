@@ -5,8 +5,7 @@ from datetime import datetime
 import json
 from sqlalchemy import event
 from sqlalchemy.engine import Engine
-
-db = SQLAlchemy()
+from extensions import db
 
 # Enable Write-Ahead Logging (WAL) mode for SQLite
 # This significantly improves concurrency by allowing simultaneous readers and writers
@@ -34,12 +33,41 @@ class User(UserMixin, db.Model):
     is_admin = db.Column(db.Boolean, default=False)
     is_banned = db.Column(db.Boolean, default=False)
     is_muted = db.Column(db.Boolean, default=False)
+    stardust = db.Column(db.Integer, default=0)
     
     def set_password(self, password):
         self.password_hash = generate_password_hash(password)
         
     def check_password(self, password):
         return check_password_hash(self.password_hash, password)
+
+    @property
+    def level_info(self):
+        """Returns (title, color_class) based on stardust"""
+        points = self.stardust
+        if points >= 20000: return '星云', 'text-promethium' # Custom or use standard
+        if points >= 15000: return '超新星', 'text-danger'
+        if points >= 10000: return '白矮星', 'text-white-50'
+        if points >= 7500: return '红巨星', 'text-danger'
+        if points >= 5000: return '黄矮星', 'text-warning'
+        if points >= 3000: return '红矮星', 'text-danger'
+        if points >= 2000: return '巨行星', 'text-primary'
+        if points >= 1000: return '行星', 'text-info'
+        if points >= 500: return '卫星', 'text-secondary'
+        if points >= 200: return '彗星', 'text-light'
+        if points >= 100: return '小行星', 'text-muted'
+        if points >= 50: return '流星', 'text-muted'
+        return '星际尘埃', 'text-muted'
+
+class StardustHistory(db.Model):
+    id = db.Column(db.Integer, primary_key=True)
+    user_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False)
+    category = db.Column(db.String(100), nullable=False) # 'all' for comprehensive, or specific category
+    amount = db.Column(db.Integer, nullable=False)
+    reason = db.Column(db.String(50)) # e.g., 'exam_reward'
+    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+
+    user = db.relationship('User', backref=db.backref('stardust_history', lazy=True))
 
 class Question(db.Model):
     id = db.Column(db.Integer, primary_key=True)
@@ -82,6 +110,7 @@ class ExamResult(db.Model):
             'id': self.id,
             'user_id': self.user_id,
             'username': self.user.username if self.user else 'Unknown',
+            'level_info': self.user.level_info if self.user else ('', ''),
             'timestamp': self.timestamp,
             'total_score': self.total_score,
             'max_score': self.max_score,

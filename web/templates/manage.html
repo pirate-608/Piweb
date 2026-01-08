@@ -5,7 +5,7 @@
 
 <div class="card mb-4">
     <div class="card-body">
-        <form method="GET" action="{{ url_for('manage') }}" class="row g-3">
+        <form method="GET" action="{{ url_for('admin.manage') }}" class="row g-3">
             <div class="col-md-4">
                 <input type="text" class="form-control" name="search" placeholder="搜索题目内容..." value="{{ search }}" style="color: black; background-color: white;">
             </div>
@@ -21,7 +21,7 @@
                 <button type="submit" class="btn btn-primary w-100">筛选</button>
             </div>
             <div class="col-md-3 text-end">
-                <a href="/add" class="btn btn-success">
+                <a href="{{ url_for('admin.add') }}" class="btn btn-success">
                     <i class="bi bi-plus-circle"></i> 添加新题目
                 </a>
             </div>
@@ -55,7 +55,7 @@
                 <td><span class="badge bg-info text-dark">{{ q.category }}</span></td>
                 <td>
                     {% if q.image %}
-                    <a href="{{ url_for('uploaded_file', filename=q.image) }}" target="_blank" class="badge bg-success text-decoration-none">查看图片</a>
+                    <a href="{{ url_for('main.uploaded_file', filename=q.image) }}" target="_blank" class="badge bg-success text-decoration-none">查看图片</a>
                     {% else %}
                     <span class="badge bg-secondary">无</span>
                     {% endif %}
@@ -68,8 +68,8 @@
                 <td>{{ q.score }}</td>
                 <td>
                     <div class="btn-group" role="group">
-                        <a href="{{ url_for('edit_question', id=q.id) }}" class="btn btn-warning btn-sm text-white">编辑</a>
-                        <form action="{{ url_for('delete_question', id=q.id) }}" method="POST" onsubmit="return confirm('确定要删除这道题目吗？');" style="display: inline-block;">
+                        <a href="{{ url_for('admin.edit_question', id=q.id) }}" class="btn btn-warning btn-sm text-white">编辑</a>
+                        <form action="{{ url_for('admin.delete_question', id=q.id) }}" method="POST" onsubmit="return confirm('确定要删除这道题目吗？');" style="display: inline-block;">
                             <button type="submit" class="btn btn-danger btn-sm ms-1">删除</button>
                         </form>
                     </div>
@@ -85,13 +85,13 @@
 <nav aria-label="Page navigation" class="mt-4">
     <ul class="pagination justify-content-center">
         <li class="page-item {% if not pagination.has_prev %}disabled{% endif %}">
-            <a class="page-link" href="{{ url_for('manage', page=pagination.prev_num, search=search, category=current_category) }}">上一页</a>
+            <a class="page-link" href="{{ url_for('admin.manage', page=pagination.prev_num, search=search, category=current_category) }}">上一页</a>
         </li>
         
         {% for page_num in pagination.iter_pages(left_edge=1, right_edge=1, left_current=2, right_current=2) %}
             {% if page_num %}
                 <li class="page-item {% if page_num == pagination.page %}active{% endif %}">
-                    <a class="page-link" href="{{ url_for('manage', page=page_num, search=search, category=current_category) }}">{{ page_num }}</a>
+                    <a class="page-link" href="{{ url_for('admin.manage', page=page_num, search=search, category=current_category) }}">{{ page_num }}</a>
                 </li>
             {% else %}
                 <li class="page-item disabled"><span class="page-link">...</span></li>
@@ -99,7 +99,7 @@
         {% endfor %}
 
         <li class="page-item {% if not pagination.has_next %}disabled{% endif %}">
-            <a class="page-link" href="{{ url_for('manage', page=pagination.next_num, search=search, category=current_category) }}">下一页</a>
+            <a class="page-link" href="{{ url_for('admin.manage', page=pagination.next_num, search=search, category=current_category) }}">下一页</a>
         </li>
     </ul>
 </nav>
