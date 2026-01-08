@@ -3,7 +3,7 @@
 <div class="container mt-4">
     <nav aria-label="breadcrumb">
         <ol class="breadcrumb">
-            <li class="breadcrumb-item"><a href="{{ url_for('forum.index') }}">讨论区</a></li>
+            <li class="breadcrumb-item"><a href="{{ url_for('forum.index') }}">论坛</a></li>
             <li class="breadcrumb-item"><a href="{{ url_for('forum.view_board', board_id=topic.board_id) }}">{{ topic.board.name }}</a></li>
             <li class="breadcrumb-item active">主题详情</li>
         </ol>

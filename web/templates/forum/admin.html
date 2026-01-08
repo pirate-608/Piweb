@@ -2,17 +2,50 @@
 {% block content %}
 <div class="container mt-4">
     <div class="d-flex justify-content-between align-items-center">
-        <h2>板块管理</h2>
-        <a href="{{ url_for('forum.index') }}" class="btn btn-outline-secondary">返回讨论区</a>
+        <h2>版面管理</h2>
+        <a href="{{ url_for('forum.index') }}" class="btn btn-outline-secondary">返回论坛</a>
     </div>
     
+    <div class="card mb-4 mt-3 shadow-sm border-info">
+        <div class="card-header bg-info text-dark">
+            <div class="d-flex justify-content-between align-items-center">
+                <span>热度算法参数配置</span>
+                <button class="btn btn-sm btn-light" onclick="updateHotnessNow()">立即计算所有主题热度</button>
+            </div>
+        </div>
+        <div class="card-body">
+            <form action="{{ url_for('forum.update_hotness_config') }}" method="POST" class="row g-3">
+                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                <div class="col-md-3">
+                    <label class="form-label">浏览权重 (W1) - log10</label>
+                    <input type="number" step="0.1" name="w1" class="form-control" value="0.2">
+                </div>
+                <div class="col-md-3">
+                    <label class="form-label">点赞权重 (W2)</label>
+                    <input type="number" step="0.1" name="w2" class="form-control" value="1.2">
+                </div>
+                <div class="col-md-3">
+                    <label class="form-label">评论权重 (W3)</label>
+                    <input type="number" step="0.1" name="w3" class="form-control" value="1.5">
+                </div>
+                <div class="col-md-3">
+                    <label class="form-label">重力系数 (G)</label>
+                    <input type="number" step="0.1" name="g" class="form-control" value="1.5">
+                </div>
+                <div class="col-12 text-end">
+                    <button type="submit" class="btn btn-info">保存参数</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
     <div class="card mb-4 mt-3 shadow-sm border-success">
-        <div class="card-header bg-success text-white">新建版块</div>
+        <div class="card-header bg-success text-white">新建版面</div>
         <div class="card-body">
             <form action="{{ url_for('forum.create_board') }}" method="POST" class="row g-3">
                 <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
                 <div class="col-md-4">
-                    <input type="text" name="name" class="form-control" placeholder="版块名称" required>
+                    <input type="text" name="name" class="form-control" placeholder="版面名称" required>
                 </div>
                 <div class="col-md-5">
                     <input type="text" name="description" class="form-control" placeholder="简短描述">
@@ -49,10 +82,46 @@
                         <td>{{ board.description }}</td>
                         <td>{{ board.created_at.strftime('%Y-%m-%d') }}</td>
                         <td>
-                            <form action="{{ url_for('forum.delete_board', board_id=board.id) }}" method="POST" onsubmit="return confirm('确定删除？这将删除该版块下所有主题！');">
+                            <button type="button" class="btn btn-sm btn-warning me-1" data-bs-toggle="modal" data-bs-target="#editBoardModal{{ board.id }}">
+                                修改
+                            </button>
+                            <form action="{{ url_for('forum.delete_board', board_id=board.id) }}" method="POST" class="d-inline" onsubmit="return confirm('确定删除？这将删除该版面下所有主题！');">
                                 <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
                                 <button class="btn btn-sm btn-danger">删除</button>
                             </form>
+
+                            <!-- Edit Modal -->
+                            <div class="modal fade text-dark" id="editBoardModal{{ board.id }}" tabindex="-1" aria-labelledby="editBoardModalLabel{{ board.id }}" aria-hidden="true">
+                                <div class="modal-dialog">
+                                    <div class="modal-content">
+                                        <div class="modal-header">
+                                            <h5 class="modal-title" id="editBoardModalLabel{{ board.id }}">编辑版面</h5>
+                                            <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                                        </div>
+                                        <form action="{{ url_for('forum.edit_board', board_id=board.id) }}" method="POST">
+                                            <div class="modal-body text-start">
+                                                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                                                <div class="mb-3">
+                                                    <label for="name{{ board.id }}" class="form-label">名称</label>
+                                                    <input type="text" class="form-control" id="name{{ board.id }}" name="name" value="{{ board.name }}" required>
+                                                </div>
+                                                <div class="mb-3">
+                                                    <label for="description{{ board.id }}" class="form-label">描述</label>
+                                                    <input type="text" class="form-control" id="description{{ board.id }}" name="description" value="{{ board.description or '' }}">
+                                                </div>
+                                                <div class="mb-3">
+                                                    <label for="order{{ board.id }}" class="form-label">排序权重</label>
+                                                    <input type="number" class="form-control" id="order{{ board.id }}" name="order" value="{{ board.order }}">
+                                                </div>
+                                            </div>
+                                            <div class="modal-footer">
+                                                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">取消</button>
+                                                <button type="submit" class="btn btn-primary">保存修改</button>
+                                            </div>
+                                        </form>
+                                    </div>
+                                </div>
+                            </div>
                         </td>
                     </tr>
                     {% endfor %}
@@ -61,4 +130,26 @@
         </div>
     </div>
 </div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+function updateHotnessNow() {
+    if(!confirm('确定要重新计算所有主题的热度分数吗？如果数据量大可能会耗时。')) return;
+    
+    fetch("{{ url_for('forum.update_hotness_manually') }}", {
+        method: 'POST',
+        headers: {
+            'X-CSRFToken': "{{ csrf_token() }}"
+        }
+    })
+    .then(response => response.json())
+    .then(data => {
+        alert(data.message);
+    })
+    .catch(error => {
+        alert('操作失败: ' + error);
+    });
+}
+</script>
 {% endblock %}

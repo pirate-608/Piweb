@@ -75,13 +75,27 @@
         // 提交时清除缓存和警告
         const form = document.querySelector('form');
         if (form) {
-            form.addEventListener('submit', function() {
+            form.addEventListener('submit', function(event) {
+                // 提交确认
+                if (!confirm("确定要提交答卷吗？提交后将无法修改答案。")) {
+                    event.preventDefault();
+                    return;
+                }
+
                 window.onbeforeunload = null;
                 inputs.forEach(input => {
                     localStorage.removeItem('exam_' + input.id);
                 });
             });
         }
+
+        // 4. 禁止回车键提交表单
+        document.addEventListener('keydown', function(event) {
+            if (event.key === 'Enter' && event.target.tagName !== 'TEXTAREA') {
+                event.preventDefault();
+                return false;
+            }
+        });
 
         // 倒计时逻辑
         {% if remaining_sec is defined %}

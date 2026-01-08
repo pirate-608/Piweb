@@ -159,6 +159,7 @@ class Topic(db.Model):
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
     updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
     views = db.Column(db.Integer, default=0)
+    hotness = db.Column(db.Float, default=0.0, index=True)
     is_pinned = db.Column(db.Boolean, default=False)
     is_locked = db.Column(db.Boolean, default=False)
     is_deleted = db.Column(db.Boolean, default=False) # Soft delete

@@ -2,7 +2,7 @@
 {% block content %}
 <div class="container mt-4">
     <div class="d-flex justify-content-between align-items-center mb-4">
-        <h2>📑 讨论区</h2>
+        <h2>📑 论坛</h2>
         <div>
             <form action="{{ url_for('forum.index') }}" method="get" class="d-inline-block me-2">
                 <div class="input-group">
@@ -14,7 +14,7 @@
                 </div>
             </form>
             {% if current_user.is_admin %}
-            <a href="{{ url_for('forum.admin_index') }}" class="btn btn-outline-danger">管理版块</a>
+            <a href="{{ url_for('forum.admin_index') }}" class="btn btn-outline-danger">管理版面</a>
             {% endif %}
         </div>
     </div>
@@ -47,29 +47,176 @@
         </div>
     {% endif %}
 
-    <div class="row">
-        {% for board in boards %}
-        <div class="col-md-6 mb-4">
-            <div class="card h-100 shadow-sm border-0 bg-light">
-                <div class="card-body">
-                    <h4 class="card-title">
-                        <a href="{{ url_for('forum.view_board', board_id=board.id) }}" class="text-decoration-none text-dark">
-                            {{ board.name }}
-                        </a>
-                    </h4>
-                    <p class="card-text text-muted">{{ board.description }}</p>
+    <!-- Tabs Navigation -->
+    <ul class="nav nav-tabs mb-4" id="forumTabs" role="tablist">
+        <li class="nav-item" role="presentation">
+            <button class="nav-link active" id="boards-tab" data-bs-toggle="tab" data-bs-target="#boards" type="button" role="tab" aria-controls="boards" aria-selected="true">🗂️ 版面导航</button>
+        </li>
+        <li class="nav-item" role="presentation">
+            <button class="nav-link" id="latest-tab" data-bs-toggle="tab" data-bs-target="#latest" type="button" role="tab" aria-controls="latest" aria-selected="false" onclick="loadLatestTopics()">🆕 最新动态</button>
+        </li>
+        <li class="nav-item" role="presentation">
+            <button class="nav-link" id="popular-tab" data-bs-toggle="tab" data-bs-target="#popular" type="button" role="tab" aria-controls="popular" aria-selected="false" onclick="loadPopularTopics()">🔥 热门精选</button>
+        </li>
+    </ul>
+
+    <div class="tab-content" id="forumTabsContent">
+        <!-- Boards Tab -->
+        <div class="tab-pane fade show active" id="boards" role="tabpanel" aria-labelledby="boards-tab">
+            <div class="row">
+                {% for board in boards %}
+                <div class="col-md-6 mb-4">
+                    <div class="card h-100 shadow-sm border-0 bg-light">
+                        <div class="card-body">
+                            <h4 class="card-title">
+                                <a href="{{ url_for('forum.view_board', board_id=board.id) }}" class="text-decoration-none text-dark">
+                                    {{ board.name }}
+                                </a>
+                            </h4>
+                            <p class="card-text text-muted">{{ board.description }}</p>
+                        </div>
+                        <div class="card-footer bg-transparent border-top-0 d-flex justify-content-between">
+                            <small class="text-muted">主题数: {{ board.topics|length }}</small>
+                            <a href="{{ url_for('forum.view_board', board_id=board.id) }}" class="btn btn-sm btn-outline-primary">进入版面 &rarr;</a>
+                        </div>
+                    </div>
                 </div>
-                <div class="card-footer bg-transparent border-top-0 d-flex justify-content-between">
-                    <small class="text-muted">主题数: {{ board.topics|length }}</small>
-                    <a href="{{ url_for('forum.view_board', board_id=board.id) }}" class="btn btn-sm btn-outline-primary">进入版块 &rarr;</a>
+                {% else %}
+                <div class="col-12 text-center p-5">
+                    <h4 class="text-muted">暂无版面，请联系管理员创建</h4>
                 </div>
+                {% endfor %}
             </div>
         </div>
-        {% else %}
-        <div class="col-12 text-center p-5">
-            <h4 class="text-muted">暂无版块，请联系管理员创建</h4>
+
+        <!-- Latest Tab -->
+        <div class="tab-pane fade" id="latest" role="tabpanel" aria-labelledby="latest-tab">
+            <div id="latest-container" class="list-group list-group-flush">
+                <!-- JS will pop this -->
+            </div>
+            <div id="latest-loading" class="text-center py-3 d-none">
+                <div class="spinner-border text-primary" role="status">
+                    <span class="visually-hidden">Loading...</span>
+                </div>
+            </div>
+            <div id="latest-end" class="text-center py-3 text-muted d-none">没有更多内容了</div>
         </div>
-        {% endfor %}
+
+        <!-- Popular Tab -->
+        <div class="tab-pane fade" id="popular" role="tabpanel" aria-labelledby="popular-tab">
+            <div id="popular-container" class="list-group">
+                <!-- JS will pop this -->
+            </div>
+        </div>
     </div>
 </div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+    // Latest Topics Logic
+    let latestPage = 1;
+    let latestLoading = false;
+    let latestHasMore = true;
+    let latestInit = false;
+
+    function loadLatestTopics() {
+        if (latestInit) return;
+        latestInit = true;
+        fetchLatest();
+        
+        // Setup Scroll Listener
+        window.addEventListener('scroll', () => {
+            const tab = document.getElementById('latest');
+            if (tab.classList.contains('active') && tab.classList.contains('show')) {
+                if ((window.innerHeight + window.scrollY) >= document.body.offsetHeight - 500) {
+                    fetchLatest();
+                }
+            }
+        });
+    }
+
+    function fetchLatest() {
+        if (latestLoading || !latestHasMore) return;
+        latestLoading = true;
+        document.getElementById('latest-loading').classList.remove('d-none');
+
+        fetch(`{{ url_for('forum.latest_topics') }}?page=${latestPage}`)
+            .then(res => res.json())
+            .then(data => {
+                const container = document.getElementById('latest-container');
+                data.topics.forEach(t => {
+                    const item = document.createElement('a');
+                    item.href = `/forum/topic/${t.id}`;
+                    item.className = 'list-group-item list-group-item-action d-flex justify-content-between align-items-center';
+                    item.innerHTML = `
+                        <div>
+                            <span class="badge bg-secondary me-2">${t.board_name}</span>
+                            <span class="fw-bold">${t.title}</span>
+                            <br>
+                            <small class="text-muted"><i class="bi bi-person"></i> ${t.author} &bull; ${t.created_at}</small>
+                        </div>
+                        <div class="text-end">
+                            <span class="badge bg-light text-dark border"><i class="bi bi-chat-dots"></i> ${t.replies}</span>
+                            <span class="badge bg-light text-dark border ms-1"><i class="bi bi-eye"></i> ${t.views}</span>
+                        </div>
+                    `;
+                    container.appendChild(item);
+                });
+
+                latestHasMore = data.has_next;
+                if (latestHasMore) {
+                    latestPage++;
+                    document.getElementById('latest-loading').classList.add('d-none');
+                } else {
+                    document.getElementById('latest-loading').classList.add('d-none');
+                    document.getElementById('latest-end').classList.remove('d-none');
+                }
+                latestLoading = false;
+            })
+            .catch(err => {
+                console.error(err);
+                latestLoading = false;
+            });
+    }
+
+    // Popular Topics Logic
+    let popularInit = false;
+    function loadPopularTopics() {
+        if (popularInit) return;
+        popularInit = true;
+        
+        const container = document.getElementById('popular-container');
+        container.innerHTML = '<div class="text-center py-5"><div class="spinner-border text-danger"></div></div>';
+
+        fetch("{{ url_for('forum.popular_topics') }}")
+            .then(res => res.json())
+            .then(data => {
+                container.innerHTML = '';
+                data.topics.forEach((t, index) => {
+                    const item = document.createElement('a');
+                    item.href = `/forum/topic/${t.id}`;
+                    item.className = 'list-group-item list-group-item-action d-flex align-items-center p-3 mb-2 shadow-sm border rounded';
+                    
+                    let rankBadge = '';
+                    if(index === 0) rankBadge = '<span class="badge bg-danger rounded-pill me-3" style="font-size: 1.2em">🥇 1</span>';
+                    else if(index === 1) rankBadge = '<span class="badge bg-warning rounded-pill me-3" style="font-size: 1.1em">🥈 2</span>';
+                    else if(index === 2) rankBadge = '<span class="badge bg-success rounded-pill me-3" style="font-size: 1.1em">🥉 3</span>';
+                    else rankBadge = `<span class="badge bg-secondary rounded-pill me-3">${index + 1}</span>`;
+
+                    item.innerHTML = `
+                        ${rankBadge}
+                        <div class="flex-grow-1">
+                            <h5 class="mb-1 text-dark">${t.title}</h5>
+                            <small class="text-muted">
+                                ${t.board_name} | <i class="bi bi-person"></i> ${t.author} | 🔥 热度: <span class="text-danger fw-bold">${t.hotness}</span>
+                            </small>
+                        </div>
+                        <small class="text-muted ms-2">${t.created_at}</small>
+                    `;
+                    container.appendChild(item);
+                });
+            });
+    }
+</script>
 {% endblock %}

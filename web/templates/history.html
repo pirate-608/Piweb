@@ -56,10 +56,12 @@
                 </td>
                 <td>
                     <a href="{{ url_for('exam.view_history', result_id=result.id) }}" class="btn btn-sm btn-info text-white">查看详情</a>
+                    {% if current_user.is_admin %}
                     <form action="{{ url_for('exam.delete_history', result_id=result.id) }}" method="POST" class="d-inline" onsubmit="return confirm('确定要删除这条记录吗？');">
                         <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
                         <button type="submit" class="btn btn-sm btn-danger">删除</button>
                     </form>
+                    {% endif %}
                 </td>
             </tr>
             {% endfor %}

@@ -311,8 +311,37 @@ class DataManager:
     def delete_result(self, result_id):
         r = ExamResult.query.get(result_id)
         if r:
+            # Rollback stats
+            try:
+                self.rollback_user_stats(r.user_id, r.details)
+            except Exception as e:
+                print(f"Error rolling back stats: {e}")
+            
             db.session.delete(r)
             db.session.commit()
+
+    def rollback_user_stats(self, user_id, results):
+        """
+        Reverse the effect of update_user_stats.
+        """
+        category_results = {}
+        for r in results:
+            cat = r.get('category', '默认题集')
+            if cat not in category_results:
+                category_results[cat] = {'score': 0, 'max_score': 0}
+            category_results[cat]['score'] += r.get('score', 0)
+            category_results[cat]['max_score'] += r.get('full_score', 0)
+        
+        for cat, data in category_results.items():
+            stat = UserCategoryStat.query.filter_by(user_id=user_id, category=cat).first()
+            if stat:
+                stat.total_attempts = max(0, (stat.total_attempts or 1) - 1)
+                stat.total_score = max(0, (stat.total_score or 0) - data['score'])
+                stat.total_max_score = max(0, (stat.total_max_score or 0) - data['max_score'])
+        
+        # We don't revoke permissions or stardust automatically as it's complex to track back exactly
+        # But stats should be consistent.
+
 
     def create_user(self, username, password, is_admin=False):
         if User.query.filter_by(username=username).first():

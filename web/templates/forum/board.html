@@ -3,7 +3,7 @@
 <div class="container mt-4">
     <nav aria-label="breadcrumb">
         <ol class="breadcrumb">
-            <li class="breadcrumb-item"><a href="{{ url_for('forum.index') }}">讨论区</a></li>
+            <li class="breadcrumb-item"><a href="{{ url_for('forum.index') }}">论坛</a></li>
             <li class="breadcrumb-item active">{{ board.name }}</li>
         </ol>
     </nav>
@@ -42,7 +42,7 @@
         </div>
         {% else %}
         <div class="list-group-item text-center p-5">
-            <p class="mb-0 text-muted">本版块暂无主题</p>
+            <p class="mb-0 text-muted">本版面暂无主题</p>
         </div>
         {% endfor %}
     </div>

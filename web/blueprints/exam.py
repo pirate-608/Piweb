@@ -65,7 +65,8 @@ def exam():
         shuffled_questions.sort(key=lambda x: filtered_ids.index(x['id']))
         
         start_time = session.get('start_time', datetime.now().timestamp())
-        duration_sec = current_app.config['EXAM_DURATION_MINUTES'] * 60
+        # Dynamic duration: 5 minutes per question
+        duration_sec = len(filtered_ids) * 5 * 60
         elapsed = datetime.now().timestamp() - start_time
         remaining_sec = max(0, int(duration_sec - elapsed))
         
@@ -175,8 +176,8 @@ def delete_history(result_id):
         flash('记录未找到', 'error')
         return redirect(url_for('exam.history'))
         
-    if not current_user.is_admin and record.get('user_id') != current_user.id:
-        flash('您没有权限删除此记录', 'danger')
+    if not current_user.is_admin:
+        flash('只有管理员可以删除记录', 'danger')
         return redirect(url_for('exam.history'))
 
     data_manager.delete_result(result_id)

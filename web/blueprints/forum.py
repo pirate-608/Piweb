@@ -7,10 +7,136 @@ from flask import Blueprint, render_template, request, redirect, url_for, flash,
 from flask_login import login_required, current_user
 from werkzeug.utils import secure_filename
 from extensions import db, data_manager
-from models import Board, Topic, Post, TopicLike, PostLike, TopicView
+from models import Board, Topic, Post, TopicLike, PostLike, TopicView, SystemSetting
 from config import Config
+import math
+from sqlalchemy import func
 
 forum_bp = Blueprint('forum', __name__, url_prefix='/forum')
+
+# --- Hotness Algorithm ---
+def get_hotness_weights():
+    setting = SystemSetting.query.get('forum_hotness_weights')
+    if setting and setting.value:
+        return json.loads(setting.value)
+    return {'w1': 0.2, 'w2': 1.2, 'w3': 1.5, 'g': 1.5}
+
+def calculate_topic_hotness(topic, weights=None):
+    if not weights:
+        weights = get_hotness_weights()
+    
+    # 浏览数 + 1 (防止 log(0))
+    views = topic.views or 0
+    view_score = math.log10(views + 1) * weights['w1']
+    
+    # 点赞数
+    likes = TopicLike.query.filter_by(topic_id=topic.id).count()
+    like_score = likes * weights['w2']
+    
+    # 评论数 (Post count - 1 to exclude original post? Or just count posts)
+    # Assuming 'posts' relationship includes all replies. Usually topic has many posts.
+    comment_count = Post.query.filter_by(topic_id=topic.id).count()
+    comment_score = comment_count * weights['w3']
+    
+    # 时间差 (Hours)
+    now = datetime.utcnow()
+    diff = (now - topic.created_at).total_seconds() / 3600
+    time_factor = (diff + 2) ** weights['g'] # +2 to avoid near-zero division and stabilize new posts
+    
+    score = (view_score + like_score + comment_score) / time_factor
+    return score
+
+@forum_bp.route('/admin/update_hotness', methods=['POST'])
+@login_required
+def update_hotness_manually():
+    if not current_user.is_admin:
+        return {'status': 'error', 'message': 'Permission denied'}, 403
+        
+    topics = Topic.query.all()
+    weights = get_hotness_weights()
+    count = 0
+    for t in topics:
+        t.hotness = calculate_topic_hotness(t, weights)
+        count += 1
+    db.session.commit()
+    return {'status': 'success', 'message': f'Updated {count} topics'}
+
+@forum_bp.route('/admin/config/hotness', methods=['POST'])
+@login_required
+def update_hotness_config():
+    if not current_user.is_admin:
+        flash('权限不足', 'danger')
+        return redirect(url_for('forum.admin_index'))
+    
+    try:
+        w1 = float(request.form.get('w1', 0.2))
+        w2 = float(request.form.get('w2', 1.2))
+        w3 = float(request.form.get('w3', 1.5))
+        g = float(request.form.get('g', 1.5))
+        
+        weights = {'w1': w1, 'w2': w2, 'w3': w3, 'g': g}
+        
+        setting = SystemSetting.query.get('forum_hotness_weights')
+        if not setting:
+            setting = SystemSetting(key='forum_hotness_weights')
+            db.session.add(setting)
+        
+        setting.value = json.dumps(weights)
+        db.session.commit()
+        flash('热度算法参数已更新', 'success')
+    except ValueError:
+        flash('参数格式错误', 'danger')
+        
+    return redirect(url_for('forum.admin_index'))
+
+# --- API Routes ---
+@forum_bp.route('/api/latest')
+def latest_topics():
+    page = request.args.get('page', 1, type=int)
+    per_page = 10
+    pagination = Topic.query.filter_by(is_deleted=False)\
+        .order_by(Topic.created_at.desc())\
+        .paginate(page=page, per_page=per_page, error_out=False)
+    
+    topics_data = []
+    for t in pagination.items:
+        topics_data.append({
+            'id': t.id,
+            'title': t.title,
+            'board_name': t.board.name if t.board else '未知',
+            'author': t.user.username if t.user else 'Unknown',
+            'created_at': t.created_at.strftime('%Y-%m-%d %H:%M'),
+            'views': t.views,
+            'replies': len(t.posts) - 1 if t.posts else 0, # Rough count
+            # 'replies': Post.query.filter_by(topic_id=t.id).count() - 1 # More accurate but slower
+        })
+        
+    return {
+        'topics': topics_data,
+        'has_next': pagination.has_next,
+        'next_page': pagination.next_num
+    }
+
+@forum_bp.route('/api/popular')
+def popular_topics():
+    # Should probably ensure scores are fresh-ish here or rely on periodic
+    # Simple strategy: Just query sorted by hotness
+    topics = Topic.query.filter_by(is_deleted=False)\
+        .order_by(Topic.hotness.desc())\
+        .limit(10).all()
+        
+    topics_data = []
+    for t in topics:
+        topics_data.append({
+            'id': t.id,
+            'title': t.title,
+            'board_name': t.board.name if t.board else '未知',
+            'author': t.user.username if t.user else 'Unknown',
+            'created_at': t.created_at.strftime('%Y-%m-%d'),
+            'hotness': round(t.hotness, 2)
+        })
+    return {'topics': topics_data}
+
 
 def validate_and_save_forum_image(file):
     if not file or file.filename == '':
@@ -66,7 +192,27 @@ def create_board():
         board = Board(name=name, description=desc, order=order)
         db.session.add(board)
         db.session.commit()
-        flash('版块创建成功', 'success')
+        flash('版面创建成功', 'success')
+    return redirect(url_for('forum.admin_index'))
+
+@forum_bp.route('/admin/board/<int:board_id>/edit', methods=['POST'])
+@login_required
+def edit_board(board_id):
+    if not current_user.is_admin:
+        return redirect(url_for('forum.index'))
+    
+    board = Board.query.get_or_404(board_id)
+    name = request.form.get('name')
+    desc = request.form.get('description')
+    order = request.form.get('order', 0)
+    
+    if name:
+        board.name = name
+        board.description = desc
+        board.order = order
+        db.session.commit()
+        flash('版面更新成功', 'success')
+    
     return redirect(url_for('forum.admin_index'))
 
 @forum_bp.route('/admin/board/<int:board_id>/delete', methods=['POST'])
@@ -77,7 +223,7 @@ def delete_board(board_id):
     board = Board.query.get_or_404(board_id)
     db.session.delete(board)
     db.session.commit()
-    flash('版块已删除', 'success')
+    flash('版面已删除', 'success')
     return redirect(url_for('forum.admin_index'))
 
 # --- Public Routes ---
