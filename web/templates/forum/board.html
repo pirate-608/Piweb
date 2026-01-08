@@ -34,10 +34,10 @@
                     <i class="bi bi-clock"></i> {{ topic.updated_at.strftime('%Y-%m-%d %H:%M') }}
                 </small>
             </div>
-            <div class="text-end text-muted">
-                <div><i class="bi bi-chat-dots"></i> {{ topic.posts|length }}</div>
-                <div><i class="bi bi-heart"></i> {{ topic.likes|length }}</div>
-                <div><i class="bi bi-eye"></i> {{ topic.views }}</div>
+            <div class="text-end text-muted d-flex flex-column align-items-end" style="min-width: 100px;">
+                <div title="评论数"><i class="bi bi-chat-dots"></i> 评论: {{ topic.posts|length }}</div>
+                <div title="点赞数"><i class="bi bi-heart"></i> 点赞: {{ topic.likes|length }}</div>
+                <div title="阅读数"><i class="bi bi-eye"></i> 阅读: {{ topic.views }}</div>
             </div>
         </div>
         {% else %}

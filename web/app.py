@@ -24,7 +24,7 @@ import eventlet
 from config import Config
 from utils.data_manager import DataManager
 from utils.queue_manager import GradingQueue
-from models import db, User, SystemSetting, UserCategoryStat, Topic, Post
+from models import db, User, SystemSetting, UserCategoryStat, Topic, Post, TopicView
 
 if getattr(sys, 'frozen', False):
     # Determine base directory for resources
@@ -504,6 +504,13 @@ def profile():
         Topic.user_id == current_user.id,
         Post.user_id != current_user.id
     ).order_by(Post.created_at.desc()).limit(20).all()
+
+    # Get browsing history
+    browsing_history = db.session.query(TopicView, Topic)\
+        .join(Topic, TopicView.topic_id == Topic.id)\
+        .filter(TopicView.user_id == current_user.id)\
+        .order_by(TopicView.created_at.desc())\
+        .limit(50).all()
     
     return render_template('profile.html', 
                          rank=rank, 
@@ -511,7 +518,8 @@ def profile():
                          overall_stats=overall_stats,
                          my_topics=my_topics,
                          my_posts=my_posts,
-                         replies_received=replies_received)
+                         replies_received=replies_received,
+                         browsing_history=browsing_history)
 
 @app.route('/register', methods=['GET', 'POST'])
 def register():

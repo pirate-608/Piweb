@@ -90,6 +90,9 @@
                     <li class="nav-item">
                         <a class="nav-link" id="replies-tab" data-bs-toggle="tab" href="#replies" role="tab">收到的回复</a>
                     </li>
+                    <li class="nav-item">
+                        <a class="nav-link" id="history-tab" data-bs-toggle="tab" href="#history" role="tab">浏览记录</a>
+                    </li>
                 </ul>
                 
                 <div class="tab-content" id="profileTabsContent">
@@ -190,6 +193,28 @@
                     </div>
                 {% else %}
                     <p class="text-muted text-center my-3">暂无收到的回复</p>
+                {% endif %}
+            </div>
+
+            <!-- Browsing History Tab -->
+            <div class="tab-pane fade" id="history" role="tabpanel">
+                {% if browsing_history %}
+                    <div class="list-group list-group-flush">
+                        {% for view, topic in browsing_history %}
+                        <div class="list-group-item list-group-item-action position-relative">
+                            <a href="{{ url_for('forum.view_topic', topic_id=topic.id) }}" class="stretched-link"></a>
+                            <div class="d-flex w-100 justify-content-between">
+                                <h6 class="mb-1 text-primary">{{ topic.title }}</h6>
+                                <small class="text-muted">{{ view.created_at.strftime('%Y-%m-%d %H:%M') }}</small>
+                            </div>
+                            <small class="text-muted">
+                                版块: {{ topic.board.name }} | 作者: {{ topic.user.username }}
+                            </small>
+                        </div>
+                        {% endfor %}
+                    </div>
+                {% else %}
+                    <p class="text-muted text-center my-3">暂无浏览记录</p>
                 {% endif %}
             </div>
 

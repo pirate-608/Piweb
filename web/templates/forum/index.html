@@ -30,7 +30,7 @@
                         <div>
                             <h5 class="mb-1">{{ topic.title }}</h5>
                             <small class="text-muted">
-                                版块: {{ topic.board.name }} | 作者: <a href="{{ url_for('user_profile', user_id=topic.user.id) }}" class="text-decoration-none position-relative" style="z-index: 2; color: #0d6efd;">{{ topic.user.username }}</a> | 回复: {{ topic.posts|length }} | 点赞: {{ topic.likes|length }} | 阅读: {{ topic.views }}
+                                版块: {{ topic.board.name }} | 作者: <a href="{{ url_for('user_profile', user_id=topic.user.id) }}" class="text-decoration-none position-relative" style="z-index: 2; color: #0d6efd;">{{ topic.user.username }}</a> | 评论: {{ topic.posts|length }} | 点赞: {{ topic.likes|length }} | 阅读: {{ topic.views }}
                             </small>
                         </div>
                         <small class="text-muted">{{ topic.updated_at.strftime('%Y-%m-%d %H:%M') }}</small>
