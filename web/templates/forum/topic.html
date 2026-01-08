@@ -74,14 +74,21 @@
             {% endif %}
         </div>
         <div class="card-footer bg-white">
-            <form action="{{ url_for('forum.topic_action', topic_id=topic.id) }}" method="POST" class="d-inline">
-                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-                <input type="hidden" name="action" value="like">
-                <button class="btn btn-sm {{ 'btn-danger' if user_liked else 'btn-outline-danger' }}">
-                    <i class="bi bi-heart{{ '-fill' if user_liked else '' }}"></i> {{ topic.likes|length }}
-                </button>
-            </form>
-            <span class="ms-3 text-muted"><i class="bi bi-eye"></i> {{ topic.views }}</span>
+            <div class="d-flex align-items-center">
+                <form action="{{ url_for('forum.topic_action', topic_id=topic.id) }}" method="POST" class="d-inline me-1">
+                    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                    <input type="hidden" name="action" value="like">
+                    <button class="btn btn-sm {{ 'btn-danger' if user_liked else 'btn-outline-danger' }}">
+                        <i class="bi bi-heart{{ '-fill' if user_liked else '' }}"></i> 点赞
+                    </button>
+                </form>
+                <span class="text-danger fw-bold ms-1" style="font-size: 1.1em;">{{ topic.likes|length }}</span>
+
+                <div class="ms-auto text-muted">
+                    <span class="me-3">阅读: {{ topic.views }}</span>
+                    <span>评论: {{ topic.posts|length }}</span>
+                </div>
+            </div>
         </div>
     </div>
 
@@ -106,7 +113,7 @@
             
             {% if post.parent %}
             <div class="alert alert-secondary p-2 mb-2 small">
-                <i class="bi bi-reply-fill"></i> 回复 <strong>{{ post.parent.user.username }}</strong>:
+                <i class="bi bi-reply-fill"></i> 回复 <strong><a href="{{ url_for('user_profile', user_id=post.parent.user.id) }}" class="text-decoration-none" style="color: #0d6efd;">{{ post.parent.user.username }}</a></strong>:
                 <div class="text-muted text-truncate">{{ post.parent.content }}</div>
             </div>
             {% endif %}
@@ -114,6 +121,14 @@
             <p class="mb-0" style="white-space: pre-wrap;">{{ post.content }}</p>
             
             <div class="text-end mt-2">
+                <form action="{{ url_for('forum.post_action', post_id=post.id) }}" method="POST" class="d-inline me-3">
+                    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                    <input type="hidden" name="action" value="like">
+                    <button class="btn btn-sm text-decoration-none border-0 bg-transparent p-0 {{ 'text-danger' if post.id in liked_posts else 'text-muted' }}" title="点赞">
+                        <i class="bi bi-heart{{ '-fill' if post.id in liked_posts else '' }}"></i> <span class="ms-1">{{ post.likes|length }}</span>
+                    </button>
+                </form>
+
                 <button class="btn btn-sm btn-link text-decoration-none" onclick="replyTo({{ post.id }}, '{{ post.user.username }}')">
                     <i class="bi bi-chat-dots"></i> 回复
                 </button>
@@ -144,6 +159,7 @@
                     {% endif %}
                 </div>
                 <div class="text-end">
+                    <button type="button" id="btn-cancel-reply" class="btn btn-secondary me-2 d-none" onclick="cancelReply()">取消回复</button>
                     <button type="submit" class="btn btn-primary" {{ 'disabled' if current_user.is_muted else '' }}>
                         <i class="bi bi-send"></i> 提交评论
                     </button>
@@ -161,6 +177,7 @@ function replyTo(postId, username) {
     document.getElementById('reply-parent-id').value = postId;
     document.getElementById('reply-target-user').innerText = username;
     document.getElementById('reply-target-display').classList.remove('d-none');
+    document.getElementById('btn-cancel-reply').classList.remove('d-none');
     document.getElementById('reply-content').focus();
     // Scroll to form
     const formOptions = { behavior: 'smooth', block: 'center' };
@@ -170,6 +187,7 @@ function replyTo(postId, username) {
 function cancelReply() {
     document.getElementById('reply-parent-id').value = '';
     document.getElementById('reply-target-display').classList.add('d-none');
+    document.getElementById('btn-cancel-reply').classList.add('d-none');
 }
 </script>
 {% endblock %}

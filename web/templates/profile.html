@@ -173,16 +173,19 @@
                 {% if replies_received %}
                     <div class="list-group list-group-flush">
                         {% for post in replies_received %}
-                        <a href="{{ url_for('forum.view_topic', topic_id=post.topic.id) }}" class="list-group-item list-group-item-action">
+                        <div class="list-group-item list-group-item-action position-relative">
+                            <a href="{{ url_for('forum.view_topic', topic_id=post.topic.id) }}" class="stretched-link"></a>
                             <div class="d-flex w-100 justify-content-between">
                                 <div>
-                                    <span class="badge bg-info text-dark">{{ post.user.username }}</span>
+                                    <span class="badge bg-info text-dark position-relative" style="z-index: 2;">
+                                        <a href="{{ url_for('user_profile', user_id=post.user.id) }}" class="text-dark text-decoration-none">{{ post.user.username }}</a>
+                                    </span>
                                     <span class="text-dark ms-2">{{ post.content|striptags }}</span>
                                 </div>
                                 <small class="text-muted">{{ post.created_at.strftime('%Y-%m-%d') }}</small>
                             </div>
                             <small class="text-muted">回复了你的主题: {{ post.topic.title }}</small>
-                        </a>
+                        </div>
                         {% endfor %}
                     </div>
                 {% else %}

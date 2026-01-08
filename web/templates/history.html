@@ -40,7 +40,7 @@
             {% for result in results %}
             <tr>
                 {% if current_user.is_admin %}
-                <td>{{ result.username }}</td>
+                <td><a href="{{ url_for('user_profile', user_id=result.user_id) }}" class="text-decoration-none fw-bold" style="color: #0d6efd;">{{ result.username }}</a></td>
                 {% endif %}
                 <td>{{ result.timestamp }}</td>
                 <td>

@@ -371,6 +371,7 @@ class DataManager:
             
             if total_max > 0: # Only include users who have taken exams
                 global_leaderboard.append({
+                    'user_id': user.id,
                     'username': user.username,
                     'accuracy': round(accuracy, 1),
                     'total_exams': sum(s.total_attempts for s in stats)
@@ -389,6 +390,7 @@ class DataManager:
                 if stat.total_max_score > 0:
                     acc = (stat.total_score / stat.total_max_score * 100)
                     leaderboard.append({
+                        'user_id': stat.user_id,
                         'username': stat.user.username,
                         'accuracy': round(acc, 1),
                         'attempts': stat.total_attempts

@@ -6,7 +6,7 @@ from datetime import datetime
 from flask import Blueprint, render_template, request, redirect, url_for, flash, current_app, abort
 from flask_login import login_required, current_user
 from werkzeug.utils import secure_filename
-from models import db, Board, Topic, Post, TopicLike
+from models import db, Board, Topic, Post, TopicLike, PostLike, TopicView
 from config import Config
 
 forum_bp = Blueprint('forum', __name__, url_prefix='/forum')
@@ -143,16 +143,29 @@ def view_topic(topic_id):
     if topic.is_deleted:
         abort(404)
         
-    # Increment views (simple)
-    topic.views += 1
-    db.session.commit()
+    # Unique view counting
+    if current_user.is_authenticated:
+        viewed = TopicView.query.filter_by(user_id=current_user.id, topic_id=topic.id).first()
+        if not viewed:
+            new_view = TopicView(user_id=current_user.id, topic_id=topic.id)
+            db.session.add(new_view)
+            topic.views += 1
+            db.session.commit()
     
     posts = Post.query.filter_by(topic_id=topic.id).order_by(Post.created_at).all()
     user_liked = False
+    liked_posts = set()
     if current_user.is_authenticated:
         user_liked = TopicLike.query.filter_by(user_id=current_user.id, topic_id=topic.id).first() is not None
+        # Get liked posts
+        if posts:
+            user_post_likes = PostLike.query.filter(
+                PostLike.user_id == current_user.id,
+                PostLike.post_id.in_([p.id for p in posts])
+            ).all()
+            liked_posts = {pl.post_id for pl in user_post_likes}
         
-    return render_template('forum/topic.html', topic=topic, posts=posts, user_liked=user_liked)
+    return render_template('forum/topic.html', topic=topic, posts=posts, user_liked=user_liked, liked_posts=liked_posts)
 
 @forum_bp.route('/topic/<int:topic_id>/reply', methods=['POST'])
 @login_required
@@ -199,27 +212,39 @@ def topic_action(topic_id):
             like = TopicLike(user_id=current_user.id, topic_id=topic.id)
             db.session.add(like)
         db.session.commit()
-        return redirect(request.referrer)
     
-    # Admin only actions
-    if not current_user.is_admin:
-        flash('权限不足', 'danger')
-        return redirect(request.referrer)
-        
-    if action == 'pin':
-        topic.is_pinned = not topic.is_pinned
-        flash('置顶状态已更新', 'info')
-    elif action == 'lock':
-        topic.is_locked = not topic.is_locked
-        flash('锁定状态已更新', 'info')
-    elif action == 'delete':
-        topic.is_deleted = True
-        flash('主题已删除', 'success')
-        db.session.commit()
-        return redirect(url_for('forum.view_board', board_id=topic.board_id))
-        
+    if action in ['pin', 'lock', 'delete'] and current_user.is_admin:
+        if action == 'pin':
+            topic.is_pinned = not topic.is_pinned
+            flash('置顶状态已更新', 'info')
+        elif action == 'lock':
+            topic.is_locked = not topic.is_locked
+            flash('锁定状态已更新', 'info')
+        elif action == 'delete':
+            topic.is_deleted = True
+            db.session.commit()
+            flash('主题已删除', 'success')
+            return redirect(url_for('forum.view_board', board_id=topic.board_id))
+            
     db.session.commit()
-    return redirect(request.referrer)
+    return redirect(url_for('forum.view_topic', topic_id=topic.id))
+
+@forum_bp.route('/post/<int:post_id>/action', methods=['POST'])
+@login_required
+def post_action(post_id):
+    post = Post.query.get_or_404(post_id)
+    action = request.form.get('action')
+    
+    if action == 'like':
+        existing = PostLike.query.filter_by(user_id=current_user.id, post_id=post.id).first()
+        if existing:
+            db.session.delete(existing)
+        else:
+            like = PostLike(user_id=current_user.id, post_id=post.id)
+            db.session.add(like)
+        db.session.commit()
+        
+    return redirect(url_for('forum.view_topic', topic_id=post.topic_id) + f'#post-{post.id}')
 
 @forum_bp.route('/topic/<int:topic_id>/edit', methods=['GET', 'POST'])
 @login_required

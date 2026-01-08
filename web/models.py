@@ -157,8 +157,19 @@ class Post(db.Model):
     topic = db.relationship('Topic', backref=db.backref('posts', lazy=True, cascade="all, delete-orphan"))
     user = db.relationship('User', backref=db.backref('posts', lazy=True))
     replies = db.relationship('Post', backref=db.backref('parent', remote_side=[id]), lazy=True)
+    likes = db.relationship('PostLike', backref='post', lazy=True, cascade="all, delete-orphan")
 
 class TopicLike(db.Model):
+    user_id = db.Column(db.Integer, db.ForeignKey('user.id'), primary_key=True)
+    topic_id = db.Column(db.Integer, db.ForeignKey('topic.id'), primary_key=True)
+    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+
+class PostLike(db.Model):
+    user_id = db.Column(db.Integer, db.ForeignKey('user.id'), primary_key=True)
+    post_id = db.Column(db.Integer, db.ForeignKey('post.id'), primary_key=True)
+    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+
+class TopicView(db.Model):
     user_id = db.Column(db.Integer, db.ForeignKey('user.id'), primary_key=True)
     topic_id = db.Column(db.Integer, db.ForeignKey('topic.id'), primary_key=True)
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
