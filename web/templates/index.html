@@ -129,10 +129,10 @@
                     <p class="card-text">次个人记录</p>
                 </div>
             {% else %}
-                <div class="card-header">全站考试</div>
+                <div class="card-header">全站总考试次数</div>
                 <div class="card-body">
                     <h1 class="card-title display-4">{{ stats.total_exams }}</h1>
-                    <p class="card-text">次累计记录</p>
+                    <p class="card-text">次全站记录</p>
                 </div>
             {% endif %}
         </div>
@@ -140,16 +140,16 @@
     <div class="col-md-4">
         <div class="card text-white bg-info mb-3 h-100">
             {% if current_user.is_authenticated and user_stats %}
-                <div class="card-header">我的均分</div>
+                <div class="card-header">我的正确率</div>
                 <div class="card-body">
-                    <h1 class="card-title display-4">{{ user_stats.avg_score }}</h1>
-                    <p class="card-text">分</p>
+                    <h1 class="card-title display-4">{{ user_stats.avg_accuracy }}%</h1>
+                    <p class="card-text">平均正确率</p>
                 </div>
             {% else %}
-                <div class="card-header">全站均分</div>
+                <div class="card-header">全站平均正确率</div>
                 <div class="card-body">
-                    <h1 class="card-title display-4">{{ stats.avg_score }}</h1>
-                    <p class="card-text">分 (所有用户)</p>
+                    <h1 class="card-title display-4">{{ stats.avg_accuracy }}%</h1>
+                    <p class="card-text">所有用户平均值</p>
                 </div>
             {% endif %}
         </div>

@@ -191,15 +191,20 @@ class DataManager:
         total_questions = Question.query.count()
         total_exams = ExamResult.query.count()
         
-        # Calculate average score
+        # Calculate average accuracy
         from sqlalchemy import func
-        avg_score = db.session.query(func.avg(ExamResult.total_score)).scalar()
-        avg_score = round(avg_score, 1) if avg_score else 0
+        total_score_sum = db.session.query(func.sum(ExamResult.total_score)).scalar() or 0
+        total_max_sum = db.session.query(func.sum(ExamResult.max_score)).scalar() or 0
         
+        if total_max_sum > 0:
+            avg_accuracy = round((total_score_sum / total_max_sum) * 100, 1)
+        else:
+            avg_accuracy = 0
+            
         return {
             'total_questions': total_questions,
             'total_exams': total_exams,
-            'avg_score': avg_score
+            'avg_accuracy': avg_accuracy
         }
 
     def get_categories(self):

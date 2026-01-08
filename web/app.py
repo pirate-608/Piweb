@@ -285,18 +285,23 @@ def index():
 
     user_charts = None
     user_stats = None
-    if current_user.is_authenticated:
+    if current_user.is_authenticated and not current_user.is_admin:
         user_charts = data_manager.get_user_dashboard_stats(current_user.id)
         
         # Calculate Personal Stats for the cards
         ug_stats_query = UserCategoryStat.query.filter_by(user_id=current_user.id).all()
         ug_total_exams = sum(s.total_attempts for s in ug_stats_query)
         ug_total_score = sum(s.total_score for s in ug_stats_query)
-        ug_avg = round((ug_total_score / ug_total_exams), 1) if ug_total_exams > 0 else 0
+        ug_total_max = sum(s.total_max_score for s in ug_stats_query)
+        
+        # Calculate accuracy
+        ug_accuracy = 0
+        if ug_total_max > 0:
+            ug_accuracy = round((ug_total_score / ug_total_max) * 100, 1)
         
         user_stats = {
             'total_exams': ug_total_exams,
-            'avg_score': ug_avg
+            'avg_accuracy': ug_accuracy
         }
     
     # Get user guide and announcement
@@ -382,15 +387,17 @@ def user_profile(user_id):
         stats_query = UserCategoryStat.query.filter_by(user_id=user.id).all()
         total_exams = sum(s.total_attempts for s in stats_query)
         total_score = sum(s.total_score for s in stats_query)
-        avg_score = (total_score / total_exams) if total_exams > 0 else 0.0
+        total_max = sum(s.total_max_score for s in stats_query)
+        
+        avg_accuracy = (total_score / total_max * 100) if total_max > 0 else 0.0
         
         stats = {
             'total_exams': total_exams,
-            'avg_score': avg_score
+            'avg_accuracy': avg_accuracy
         }
     except:
         rank = 'N/A'
-        stats = {'total_exams': 0, 'avg_score': 0}
+        stats = {'total_exams': 0, 'avg_accuracy': 0}
         
     # 2. Topics
     topics = Topic.query.filter_by(user_id=user.id, is_deleted=False).order_by(Topic.created_at.desc()).limit(20).all()
@@ -479,12 +486,14 @@ def profile():
     stats_query = UserCategoryStat.query.filter_by(user_id=current_user.id).all()
     total_exams = sum(s.total_attempts for s in stats_query)
     total_score = sum(s.total_score for s in stats_query)
-    # Average Score per Exam
-    avg_score = (total_score / total_exams) if total_exams > 0 else 0
+    total_max = sum(s.total_max_score for s in stats_query)
+    
+    # Average Accuracy
+    avg_accuracy = (total_score / total_max * 100) if total_max > 0 else 0
     
     overall_stats = {
         'total_exams': total_exams,
-        'avg_score': avg_score
+        'avg_accuracy': avg_accuracy
     }
     
     # New: Forum Data
