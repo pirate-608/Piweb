@@ -1,63 +1,49 @@
-# Auto Grading System (自动阅卷系统)
 
-这是一个基于 C 语言核心逻辑和 Python Flask Web 界面的自动阅卷系统。支持命令行 (CLI) 和 Web 两种交互方式。
+# Night Watch's Window (NWW-守夜人之窗)
 
-## 🚀 最新优化 (v2.2) - 异步架构升级
+本项目以“守夜人之窗”（NWW）为核心，聚焦于现代化 Web 交互体验，提供多元化的在线答题、成绩分析与论坛功能。**Web 端是本项目的主力形态**，拥有完整的用户系统、数据可视化、题库管理、实时阅卷与消息推送等特性，是一个集答题和社区为一体的娱乐平台（可扩展适用于教学、竞赛、练习等多场景）。
 
-*   ⚡ **异步任务队列**：引入 **Celery + Redis** 架构，将耗时的阅卷任务（特别是批量阅卷）从 Web 主线程剥离，大幅提升 Web 响应速度和吞吐量。
-*   � **实时 WebSocket 反馈**：引入 **Flask-SocketIO**，在后台阅卷过程中实时向前端推送进度更新，无需轮询，体验更加流畅。
-*   �🔄 **Redis 缓存加速**：不仅作为消息队列 Broker，还接管了 Flask Session 存储，并缓存高频访问的仪表盘统计数据，减少数据库压力。
-*   🐋 **全栈容器化**：新增 `worker` (Celery) 和 `redis` 容器，现在 `docker-compose` 一键拉起 5 个微服务 (Web, DB, Redis, Worker, Tunnel)。
-*   🗄️ **企业级数据库**：目前默认支持 **PostgreSQL**，支持高并发读写，彻底解决 SQLite 的锁竞争问题。
-*   🛠️ **智能迁移**：提供 `migrate_to_postgres.py` 脚本，支持从旧版 SQLite 无缝迁移数据到 PostgreSQL。
-*   🛡️ **安全性增强**：全站启用 CSRF 防护，确保表单提交安全。
-*   📦 **离线支持**：Bootstrap 5 和 Chart.js 静态资源本地化，无需外网即可完整运行。
-*   🔄 **数据同步**：Web 端题库修改会自动同步到 C 语言核心数据文件 (`questions.txt`)，确保双端数据一致。
-*   ⚡ **性能提升**：启用 `-O2` 编译优化，数据库字段增加索引，大幅提升查询与阅卷速度。
+## ⭐ 项目定位
 
-## 项目特性
+- **Web 端为主**：
+    - 提供注册/登录、考试、成绩趋势、错题分析、题库管理、论坛等全套功能。
+    - 支持异步阅卷、实时进度推送（Celery + Redis + SocketIO）、企业级数据库（PostgreSQL）、容器化部署。
+    - 现代响应式界面，安全性与易用性兼备。
 
-*   **双模式交互**：
-    *   **CLI 模式**：
-        *   经典的命令行交互，支持 Windows/Linux。
-        *   **全新彩色 UI**：引入 ANSI 颜色支持，界面更美观清晰。
-        *   **可视化进度条**：考试过程中实时显示答题进度。
-        *   **历史记录图表**：在终端内直接绘制 ASCII 柱状图，展示历史成绩趋势。
-    *   **Web 模式**：
-        *   **用户系统**：完整的注册/登录流程，区分管理员与学生权限。
-        *   **数据仪表盘**：可视化展示成绩趋势与错题分析。
-        *   **现代化界面**：基于 Bootstrap 5 的响应式设计。
-        *   **考试安全**：考试模式锁定、防后退、防意外刷新。
-*   **智能评分**：
-    *   引入 **Levenshtein 编辑距离算法**，支持模糊匹配。
-    *   不再要求答案完全一致，允许一定程度的错别字（如 "Hello" 与 "Hllo"），评分更加人性化。
-*   **混合编程**：
-    *   核心阅卷逻辑 (`grading.c`) 由 C 语言编写，编译为动态链接库 (`.dll`/`.so`)。
-    *   Web 层由 Python Flask 实现，通过 `ctypes` 调用 C 语言核心库。
+- **CLI 测试程序**：
+    - 仅用于 C 语言阅卷核心的简单功能测试与开发验证。
+    - 未开发终端下的完整交互，命令行仅保留最基础的阅卷算法验证与数据兼容性测试。
+    - 所有正式使用、日常操作、管理与数据分析均建议通过 Web 端完成。
+
+## 技术架构亮点
+
+- **C 语言高性能阅卷核心**，通过 Python `ctypes` 融合进 Flask Web。
+- **异步任务队列**（Celery + Redis），大幅提升并发与响应速度。
+- **实时 WebSocket 进度推送**，考试体验流畅。
+- **PostgreSQL 数据库**，支持高并发与数据一致性。
+- **全栈容器化**，一键部署。
+- **数据自动同步**，Web 端题库变更实时导出至 `questions.txt`，保障 CLI 测试与 Web 题库一致。
 
 ## 目录结构
 
 ```text
-auto-grading-system/
-├── build/                # 编译产物 (可执行文件和动态库)
+NWW2026/
+├── build/                # C 语言编译产物
 ├── include/              # C 头文件
 ├── src/                  # C 源文件
-├── web/                  # Python Web 源代码
-│   ├── instance/         # 数据库文件 (data.db)
-│   ├── static/           # 静态资源 (css/, js/, uploads/)
+├── web/                  # Python Web 源代码（主入口）
+│   ├── instance/         # 数据库文件
+│   ├── static/           # 静态资源
 │   ├── templates/        # HTML 模板
 │   ├── utils/            # 工具模块
 │   ├── models.py         # 数据库模型
 │   ├── app.py            # Flask 主程序
-│   └── config.py         # 项目配置
+│   └── config.py         # 配置
 ├── Makefile              # 构建脚本
-├── scripts/              # 部署脚本目录
-│   ├── init_env.bat      # 环境初始化脚本 (内部使用)
-│   ├── deploy_local.bat  # 本地部署/开发脚本
-│   └── deploy_public.bat # 公网部署/生产脚本
-├── web/
-│   ├── app.py            # Web 应用主程序
-│   └── wsgi.py           # 生产环境入口
+├── scripts/              # 部署/迁移脚本
+├── questions.txt         # 题库数据（Web端自动导出）
+├── Dockerfile            # 容器构建
+├── docker-compose.yml    # 多服务编排
 └── README.md             # 项目说明
 ```
 
@@ -73,7 +59,7 @@ auto-grading-system/
     docker-compose up -d --build
     ```
     系统会自动通过 Docker Compose 拉起以下服务：
-    *   **web**: Python Flask 应用 (Waitress server)
+    *   **web**: Python Flask 应用（Gunicorn + Eventlet，支持SocketIO，生产环境推荐）
     *   **db**: PostgreSQL 15 数据库
     *   **redis**: Redis 7.0 (缓存与消息队列)
     *   **worker**: Celery Worker (后台异步阅卷进程)
@@ -123,7 +109,12 @@ auto-grading-system/
 
 ### 👑 管理员用户
 1.  **获取权限**：
-    *   目前需手动修改数据库。使用 SQLite 工具打开 `web/instance/data.db`。
+    *   目前需手动修改数据库。请使用 **PostgreSQL 客户端**（如 DBeaver、DataGrip、psql 命令行等）连接数据库。
+    *   连接信息：
+        - 主机：db（容器内）或 localhost（本地）
+        - 端口：5432
+        - 数据库名：grading_system
+        - 用户名/密码：postgres/postgres
     *   找到 `user` 表，将目标用户的 `is_admin` 字段设置为 `1` (True)。
 2.  **题库管理**：
     *   登录后，导航栏会出现“题库管理”入口。
@@ -161,7 +152,7 @@ auto-grading-system/
 
 如果您不想使用 Docker 也不想使用脚本，可以手动分步启动各项组件（仅适用于本地开发）：
 
-**步骤 A: 启动 Web 服务器 (Waitress)**
+**步骤 A: 启动 Web 服务器（开发/测试可用，生产环境请用 Docker）**
 ```powershell
 # 1. 激活虚拟环境
 .\.venv\Scripts\Activate
@@ -169,8 +160,11 @@ auto-grading-system/
 # 2. 设置 PYTHONPATH (防止 ModuleNotFoundError)
 $env:PYTHONPATH = "web"
 
-# 3. 启动生产服务器 (默认端口 8080)
-python web/wsgi.py
+# 3. 启动开发服务器（仅本地测试）
+python web/app.py
+
+# 4. 启动生产服务器（推荐 Gunicorn，需手动安装 eventlet）
+gunicorn --worker-class eventlet -w 4 --bind 0.0.0.0:8080 web.app:app
 ```
 
 **步骤 B: 启动 Cloudflare Tunnel**
@@ -189,14 +183,14 @@ python web/wsgi.py
 
 ### 3. 性能调优说明
 
-为了在个人电脑上获得最佳并发性能，项目已进行以下配置：
-*   **动态并发**: `web/wsgi.py` 会根据您的 CPU 核心数自动调整工作线程 (策略: `CPU核数 * 2`，上限 24)。
+为了在个人电脑或服务器上获得最佳并发性能，项目已进行以下配置：
+*   **动态并发**: Docker 部署下 Gunicorn 自动支持多进程/多线程，`web/wsgi.py` 也可根据 CPU 自动调整线程数（仅本地模式）。
 *   **内存保护**: `web/utils/queue_manager.py` 内置自动清理机制，定期移除陈旧的任务记录，防止内存溢出。
-*   **高性能 DB**: 切换至 **PostgreSQL** 后，配合连接池 (SQLAlchemy Pool) 可支持数百人同时在线考试，无需担心 `database is locked` 错误。
+*   **高性能 DB**: 生产环境**仅支持 PostgreSQL**，配合连接池 (SQLAlchemy Pool) 可支持数百人同时在线考试，无需担心 `database is locked` 错误。
 
 ## 🔄 数据库迁移指南 (Upgrade)
 
-如果您是从 v2.0 (SQLite) 升级上来的用户，请按照以下步骤迁移数据：
+如果您是从 v2.0 (SQLite) 升级上来的用户，请按照以下步骤迁移数据（**升级后仅支持 PostgreSQL，SQLite 仅用于历史兼容**）：
 
 1.  **启动 Postgres 容器** (参考"前置准备")。
 2.  **运行迁移脚本**：

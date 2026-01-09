@@ -50,7 +50,6 @@ void draw_box_bottom(int width) {
 }
 
 void draw_box_line(const char* text, int width, const char* color) {
-    int len = 0;
     // Simple length calculation (assuming ASCII for alignment, which is tricky with UTF-8 Chinese)
     // For this demo, we'll just print without strict alignment for Chinese text to avoid misalignment
     // or use a simple padding if text is ASCII.
@@ -114,7 +113,7 @@ void view_exam_history() {
         char *time_str = strtok(line, "|");
         char *score_str = strtok(NULL, "|");
         char *max_str = strtok(NULL, "|");
-        char *dur_str = strtok(NULL, "|");
+        /* char *dur_str = strtok(NULL, "|"); // 已移除未使用变量 */
         
         if (time_str && score_str && max_str) {
             strncpy(records[count].time, time_str, sizeof(records[count].time) - 1);
