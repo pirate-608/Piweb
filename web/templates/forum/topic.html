@@ -60,9 +60,11 @@
                 </div>
                 <div class="text-muted small">{{ topic.created_at.strftime('%Y-%m-%d %H:%M:%S') }}</div>
                 {% if topic.user_id == current_user.id or current_user.is_admin %}
+                {% if not topic.is_locked or current_user.is_admin %}
                 <a href="{{ url_for('forum.edit_topic', topic_id=topic.id) }}" class="ms-auto btn btn-sm btn-link text-decoration-none">
                     <i class="bi bi-pencil"></i> 编辑
                 </a>
+                {% endif %}
                 {% endif %}
             </div>
             <div class="card-text form-content p-3 bg-light text-dark rounded" style="white-space: pre-wrap; font-size: 1.1em; color: black !important;">{{ topic.content }}</div>
@@ -134,8 +136,9 @@
                 </form>
 
                 <button class="btn btn-sm btn-link text-decoration-none" onclick="replyTo({{ post.id }}, '{{ post.user.username }}')">
+                    {% if not topic.is_locked %}
                     <i class="bi bi-chat-dots"></i> 回复
-                </button>
+                    {% endif %}
             </div>
         </div>
     </div>
@@ -150,15 +153,15 @@
                 正在回复: <span id="reply-target-user" class="fw-bold"></span> 
                 <button type="button" class="btn-close btn-sm float-end" onclick="cancelReply()"></button>
             </div>
-            
             <form action="{{ url_for('forum.reply_topic', topic_id=topic.id) }}" method="POST">
                 <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
                 <input type="hidden" name="parent_id" id="reply-parent-id" value="">
-                
                 <div class="mb-3">
                     {% if current_user.is_muted %}
                         <textarea class="form-control" rows="3" disabled placeholder="您已被禁言，无法回复"></textarea>
                     {% else %}
+                        <!-- 表情包选择器容器 -->
+                        <!-- 表情包功能已回滚，移除此容器 -->
                         <textarea name="content" id="reply-content" class="form-control" style="color: black !important; background-color: #ffffff !important;" rows="3" required placeholder="请文明发言..."></textarea>
                     {% endif %}
                 </div>
@@ -169,6 +172,8 @@
                     </button>
                 </div>
             </form>
+        </div>
+        {# 表情包功能已回滚，移除相关样式和脚本 #}
         </div>
     </div>
     {% else %}
@@ -194,4 +199,5 @@ function cancelReply() {
     document.getElementById('btn-cancel-reply').classList.add('d-none');
 }
 </script>
+
 {% endblock %}

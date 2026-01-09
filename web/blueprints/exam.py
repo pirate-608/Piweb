@@ -1,13 +1,35 @@
+
+
 from flask import Blueprint, render_template, request, redirect, url_for, flash, session, current_app, Response
 from flask_login import login_required, current_user
 from extensions import db, data_manager
-from models import User
+from web.models import User
 import random
 import io
 import csv
 from datetime import datetime
 
 exam_bp = Blueprint('exam', __name__)
+
+# ...existing code...
+
+# 批量删除接口，移到 exam_bp 定义之后
+@exam_bp.route('/history/batch_delete', methods=['POST'])
+@login_required
+def batch_delete_history():
+    if not current_user.is_admin:
+        flash('只有管理员可以批量删除记录', 'danger')
+        return redirect(url_for('exam.history'))
+    ids = request.form.getlist('selected_ids')
+    if not ids:
+        flash('未选择任何记录', 'warning')
+        return redirect(url_for('exam.history'))
+    deleted = 0
+    for rid in ids:
+        if data_manager.delete_result(rid):
+            deleted += 1
+    flash(f'已批量删除 {deleted} 条记录', 'success')
+    return redirect(url_for('exam.history'))
 
 @exam_bp.route('/select_set')
 @login_required
@@ -124,6 +146,13 @@ def history():
     if q:
         q_lower = q.lower()
         results = [r for r in results if q_lower in str(r.get('username', '')).lower() or q_lower in str(r.get('timestamp', '')).lower()]
+        start_time = request.args.get('start_time', '').strip()
+        end_time = request.args.get('end_time', '').strip()
+        if start_time:
+            results = [r for r in results if r.get('timestamp', '') >= start_time]
+        if end_time:
+            results = [r for r in results if r.get('timestamp', '') <= end_time]
+        return render_template('history.html', results=results, search_query=q, start_time=start_time, end_time=end_time)
         
     return render_template('history.html', results=results, search_query=q)
 

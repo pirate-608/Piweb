@@ -118,18 +118,16 @@ def grade_exam_task(self, user_id, data):
 
     # Save to Database
     # We need to reconstruct the 'exam_record' format expected by save_exam_result
+    exam_category = data.get('category', '默认题集')
     exam_record = {
         'id': self.request.id, # Use Celery Task ID as Exam ID
         'timestamp': datetime.now().strftime('%Y-%m-%d %H:%M:%S'),
         'total_score': total_score,
         'max_score': max_score,
-        'details': results
+        'details': results,
+        'category': exam_category
     }
-    
     # Save exam result and update stats
-    # Note: data_manager methods might use db.session, so they are covered by 'ContextTask' in celery_utils
-    # Pass category for stardust calculation
-    exam_category = data.get('category', 'all')
     data_manager.save_exam_result(exam_record, user_id=user_id, category=exam_category)
     data_manager.update_user_stats(user_id, results)
     

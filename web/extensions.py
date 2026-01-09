@@ -4,7 +4,7 @@ from flask_wtf.csrf import CSRFProtect
 from flask_socketio import SocketIO
 from flask_session import Session
 import redis
-from config import Config
+from web.config import Config
 
 db = SQLAlchemy()
 login_manager = LoginManager()
@@ -12,7 +12,7 @@ csrf = CSRFProtect()
 socketio = SocketIO()
 
 # Imports that depend on db/models must come AFTER db is defined to avoid circular import errors
-from utils.data_manager import DataManager
+from web.utils.data_manager import DataManager
 from services.grading import GradingService
 
 # Data Manager & Grading Service

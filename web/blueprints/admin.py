@@ -4,7 +4,7 @@ import mimetypes
 from flask import Blueprint, render_template, request, redirect, url_for, flash, current_app
 from flask_login import login_required, current_user
 from extensions import db, data_manager
-from models import User, SystemSetting, UserCategoryStat
+from web.models import User, SystemSetting, UserCategoryStat
 
 admin_bp = Blueprint('admin', __name__)
 
@@ -199,7 +199,7 @@ def manage():
 @admin_bp.route('/add', methods=['GET', 'POST'])
 @login_required
 def add():
-    from models import UserPermission
+    from web.models import UserPermission
     has_perm = UserPermission.query.filter_by(user_id=current_user.id).first() is not None
     
     if not current_user.is_admin and not has_perm:

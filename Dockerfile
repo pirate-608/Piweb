@@ -25,7 +25,7 @@ COPY . .
 RUN make build/libgrading.so
 
 # Set environment variables
-ENV PYTHONPATH=/app/web
+ENV PYTHONPATH=/app:/app/web
 ENV PYTHONUNBUFFERED=1
 
 # Expose the port the app runs on

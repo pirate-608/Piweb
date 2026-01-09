@@ -27,7 +27,7 @@ services:
     build: .
     restart: always
     # Use watchmedo (from watchdog) to auto-restart celery on code changes
-    command: ["watchmedo", "auto-restart", "--directory=.", "--pattern=*.py", "--recursive", "--", "celery", "-A", "celery_worker.celery_app", "worker", "--loglevel=info"]
+    command: ["watchmedo", "auto-restart", "--directory=.", "--pattern=*.py", "--recursive", "--", "celery", "-A", "celery_worker", "worker", "--loglevel=info"]
     environment:
       - DATABASE_URL=postgresql://postgres:postgres@db:5432/grading_system
       - REDIS_HOST=redis

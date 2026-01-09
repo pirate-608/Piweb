@@ -1,12 +1,13 @@
 import os
 import sys
+sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
 
 from flask import Flask, redirect, url_for, flash, request, render_template
-from extensions import db, login_manager, csrf, socketio, cache_redis, data_manager, grading_service
+from web.extensions import db, login_manager, csrf, socketio, cache_redis, data_manager, grading_service
 from config import Config
 import celery_utils
 import logging
-from models import User
+from web.models import User
 
 @login_manager.user_loader
 def load_user(user_id):

@@ -7,7 +7,7 @@ from flask import Blueprint, render_template, request, redirect, url_for, flash,
 from flask_login import login_required, current_user
 from werkzeug.utils import secure_filename
 from extensions import db, data_manager
-from models import Board, Topic, Post, TopicLike, PostLike, TopicView, SystemSetting
+from web.models import Board, Topic, Post, TopicLike, PostLike, TopicView, SystemSetting
 from config import Config
 import math
 from sqlalchemy import func
@@ -323,8 +323,10 @@ def reply_topic(topic_id):
 
     topic = Topic.query.get_or_404(topic_id)
     if topic.is_locked:
-        flash('该主题已被锁定', 'warning')
-        return redirect(url_for('forum.view_topic', topic_id=topic.id))
+        # 仅管理员编辑自己主题允许回复
+        if not (current_user.is_admin and topic.user_id == current_user.id):
+            flash('该主题已被锁定，无法评论或回复', 'warning')
+            return redirect(url_for('forum.view_topic', topic_id=topic.id))
         
     content = request.form.get('content')
     parent_id = request.form.get('parent_id')
@@ -397,6 +399,11 @@ def post_action(post_id):
 @login_required
 def edit_topic(topic_id):
     topic = Topic.query.get_or_404(topic_id)
+    # 锁定主题仅允许管理员编辑自己主题
+    if topic.is_locked:
+        if not (current_user.is_admin and topic.user_id == current_user.id):
+            flash('该主题已被锁定，无法编辑', 'warning')
+            return redirect(url_for('forum.view_topic', topic_id=topic.id))
     if topic.user_id != current_user.id and not current_user.is_admin:
         abort(403)
         

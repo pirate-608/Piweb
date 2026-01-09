@@ -2,7 +2,7 @@ import os
 import json
 import shutil
 from datetime import datetime, timedelta
-from models import db, Question, ExamResult, User, UserCategoryStat, UserPermission, StardustHistory
+from web.models import db, Question, ExamResult, User, UserCategoryStat, UserPermission, StardustHistory
 
 class DataManager:
     def __init__(self, config):
@@ -230,16 +230,29 @@ class DataManager:
         if user_id:
             query = query.filter_by(user_id=user_id)
         results = query.order_by(ExamResult.timestamp.desc()).all()
+        # 兼容旧数据: 若无 category 字段，尝试从 details 推断
+        for r in results:
+            if not hasattr(r, 'category') or not r.category:
+                # 尝试从 details 里找
+                if r.details and isinstance(r.details, list) and r.details:
+                    cat = r.details[0].get('category') if isinstance(r.details[0], dict) else None
+                    if cat:
+                        r.category = cat
+                    else:
+                        r.category = '默认题集'
         return [r.to_dict() for r in results]
 
-    def save_exam_result(self, result_dict, user_id=None, category='all'):
+    def save_exam_result(self, result_dict, user_id=None, category='默认题集'):
         print(f"[DataManager] Saving exam result: {result_dict['id']} for user: {user_id}")
+        # 优先 result_dict['category']，否则用参数
+        cat = result_dict.get('category') or category or '默认题集'
         result = ExamResult(
             id=result_dict['id'],
             timestamp=result_dict['timestamp'],
             total_score=result_dict['total_score'],
             max_score=result_dict['max_score'],
-            user_id=user_id
+            user_id=user_id,
+            category=cat
         )
         result.details = result_dict['details']
         try:

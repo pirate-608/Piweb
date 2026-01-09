@@ -2,7 +2,7 @@ import json
 from flask import Blueprint, render_template, request, redirect, url_for, flash, current_app, send_from_directory
 from flask_login import login_required, current_user
 from extensions import db, data_manager, cache_redis
-from models import User, SystemSetting, UserCategoryStat, Topic, Post, TopicView
+from web.models import User, SystemSetting, UserCategoryStat, Topic, Post, TopicView
 
 main_bp = Blueprint('main', __name__)
 
