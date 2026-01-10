@@ -1,6 +1,6 @@
 MIT License
 
-Copyright (c) 2026 Auto Grading System Contributors
+Copyright (c) 2026 Night Watch's Window (NWW2026) Contributors
 
 Permission is hereby granted, free of charge, to any person obtaining a copy
 of this software and associated documentation files (the "Software"), to deal
@@ -19,3 +19,14 @@ AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
 LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
+
+---
+
+项目贡献者：
+	Night Watch's Window (NWW2026) 核心开发团队及所有开源贡献者。
+
+第三方依赖声明：
+	本项目部分功能基于 Flask, Celery, Redis, PostgreSQL, Bootstrap, Chart.js 等第三方库，均遵循其各自开源协议。
+
+简要使用说明：
+	任何人均可自由使用、修改、分发本项目代码，但请保留本许可证及原作者信息。

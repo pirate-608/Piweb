@@ -1,30 +1,19 @@
 
 # Night Watch's Window (NWW-守夜人之窗)
 
-本项目以“守夜人之窗”（NWW）为核心，聚焦于现代化 Web 交互体验，提供多元化的在线答题、成绩分析与论坛功能。**Web 端是本项目的主力形态**，拥有完整的用户系统、数据可视化、题库管理、实时阅卷与消息推送等特性，是一个集答题和社区为一体的娱乐平台（可扩展适用于教学、竞赛、练习等多场景）。
+守夜人之窗（NWW2026）是一个现代化的在线答题与社区平台，融合 C 语言高性能阅卷、Python Web 后端、实时数据推送与容器化部署。适用于教学、竞赛、练习等多场景。
 
-## ⭐ 项目定位
+## ⭐ 项目亮点
 
-- **Web 端为主**：
-    - 提供注册/登录、考试、成绩趋势、错题分析、题库管理、论坛等全套功能。
-    - 支持异步阅卷、实时进度推送（Celery + Redis + SocketIO）、企业级数据库（PostgreSQL）、容器化部署。
-    - 现代响应式界面，安全性与易用性兼备。
+- **全栈容器化部署**：一键启动，环境一致，支持生产级运维。
+- **C 语言高性能阅卷**：核心算法用 C 实现，Python `ctypes` 融合，速度与兼容性兼备。
+- **异步任务队列**：Celery + Redis，支持高并发、实时进度推送。
+- **PostgreSQL 数据库**：企业级数据一致性与扩展性。
+- **WebSocket 实时推送**：考试进度、消息通知秒级同步。
+- **题库自动同步**：Web 端题库变更自动导出至 CLI 题库，保障一致性。
+- **现代响应式界面**：Bootstrap 5，移动端友好。
 
-- **CLI 测试程序**：
-    - 仅用于 C 语言阅卷核心的简单功能测试与开发验证。
-    - 未开发终端下的完整交互，命令行仅保留最基础的阅卷算法验证与数据兼容性测试。
-    - 所有正式使用、日常操作、管理与数据分析均建议通过 Web 端完成。
-
-## 技术架构亮点
-
-- **C 语言高性能阅卷核心**，通过 Python `ctypes` 融合进 Flask Web。
-- **异步任务队列**（Celery + Redis），大幅提升并发与响应速度。
-- **实时 WebSocket 进度推送**，考试体验流畅。
-- **PostgreSQL 数据库**，支持高并发与数据一致性。
-- **全栈容器化**，一键部署。
-- **数据自动同步**，Web 端题库变更实时导出至 `questions.txt`，保障 CLI 测试与 Web 题库一致。
-
-## 目录结构
+## 🏗️ 目录结构
 
 ```text
 NWW2026/
@@ -47,17 +36,52 @@ NWW2026/
 └── README.md             # 项目说明
 ```
 
-## 快速开始
+## 🚀 快速开始
 
-### Docker 容器化部署 (Recommended)
+### Docker 一键部署（推荐）
 
-这是最稳定、环境最一致的运行方式，也是目前**唯一推荐**的生产级部署方式。
-
-1.  **启动服务**:
+1.  **启动服务**：
     在项目根目录下打开终端，运行：
     ```powershell
     docker-compose up -d --build
     ```
+2.  **访问平台**：
+    浏览器打开 http://localhost:8000
+
+### 本地开发环境（可选）
+
+1. 安装 Python 3.11、Node.js、PostgreSQL、Redis
+2. 创建虚拟环境并安装依赖：
+    ```powershell
+    python -m venv .venv
+    .venv\Scripts\activate
+    pip install -r web/requirements.txt
+    ```
+3. 启动开发服务：
+    ```powershell
+    cd web
+    flask run
+    ```
+
+## 🧑‍💻 贡献指南
+
+欢迎 PR、Issue、建议！
+
+- 代码风格：PEP8（Python）、Google C Style（C）
+- 分支管理：feature/xxx、bugfix/xxx
+- 提交信息：简明扼要，建议英文
+
+## 📄 许可证
+
+MIT License，详见 LICENSE 文件。
+
+## 📬 联系方式
+
+- 项目主页：https://github.com/nightwatch2026/NWW2026
+- 邮箱：huangmaidou608@outlook.com
+
+---
+如有任何问题或建议，欢迎通过 Issue 或邮件联系！
     系统会自动通过 Docker Compose 拉起以下服务：
     *   **web**: Python Flask 应用（Gunicorn + Eventlet，支持SocketIO，生产环境推荐）
     *   **db**: PostgreSQL 15 数据库
@@ -65,10 +89,10 @@ NWW2026/
     *   **worker**: Celery Worker (后台异步阅卷进程)
     *   **tunnel**: Cloudflare Tunnel (内网穿透 HTTP2协议)
 
-2.  **访问应用**:
+1.  **访问应用**:
     *   **内网**: [http://localhost:8080](http://localhost:8080)
     *   **外网**: 访问您在 Cloudflare Dashboard 配置的域名 (需配置 `tunnel_token.txt`)。
-    *   默认管理员账号: `admin` / `admin123`
+    *   默认管理员账号（用户名/密码）: `admin` / `admin123`
 
 **🌐 如何配置 Cloudflare Tunnel (外网访问)**
 
