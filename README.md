@@ -308,3 +308,4 @@ pyinstaller --name auto_grader_web --onedir --add-data "web/templates:templates"
     *   格式: `题目|答案|分值|图片文件名(可选)`
     *   注意：直接编辑文件时，换行符请使用 `[NEWLINE]` 代替。
 *   **修改核心逻辑**: 修改 `src/grading.c` 后，必须重新运行 `make` 更新动态库。
+*   [GitHub仓库地址](https://github.com/pirate-608/NWWeb)

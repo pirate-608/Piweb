@@ -9,7 +9,7 @@ eventlet.monkey_patch()
 # the 'web' directory is automatically added to sys.path.
 # We can import app directly.
 
-from __init__ import create_app
+from web import create_app
 
 app = create_app()
 

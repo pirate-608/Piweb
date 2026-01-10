@@ -3,7 +3,7 @@ import sys
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
 
 from flask import Flask, redirect, url_for, flash, request, render_template
-from web.extensions import db, login_manager, csrf, socketio, cache_redis, data_manager, grading_service
+from web.extensions import db, login_manager, csrf, socketio, cache_redis
 from config import Config
 import celery_utils
 import logging
@@ -21,6 +21,11 @@ from blueprints.admin import admin_bp
 from blueprints.forum import forum_bp
 
 def create_app(config_class=Config):
+    # 延迟导入，彻底消除循环依赖
+    from web.utils.data_manager import DataManager
+    from services.grading import GradingService
+    data_manager = DataManager(config_class)
+    grading_service = GradingService(config_class.DLL_PATH)
     if getattr(sys, 'frozen', False):
         if hasattr(sys, '_MEIPASS'):
             base_dir = sys._MEIPASS
@@ -65,8 +70,9 @@ def create_app(config_class=Config):
     num_workers = getattr(Config, 'GRADING_WORKERS', 4)
     grading_queue = GradingQueue(app, data_manager, lib, num_workers=num_workers)
     
-    # Attach queue to app so blueprints can access it
+    # Attach queue and data_manager to app so blueprints can access it
     app.grading_queue = grading_queue
+    app.data_manager = data_manager
 
     # Initialize Celery
     app.extensions['celery'] = celery_utils.make_celery(app)

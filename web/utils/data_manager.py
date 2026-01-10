@@ -17,171 +17,30 @@ class DataManager:
             os.makedirs(self.config.INSTANCE_PATH)
 
     def _check_legacy_db(self):
-        # Move data.db from root to instance folder if it exists in root and not in instance
-        old_db = os.path.join(self.config.BASE_DIR, 'data.db')
-        new_db = os.path.join(self.config.INSTANCE_PATH, 'data.db')
-        if os.path.exists(old_db) and not os.path.exists(new_db):
-            print(f"Moving legacy database from {old_db} to {new_db}")
-            try:
-                shutil.move(old_db, new_db)
-            except Exception as e:
-                print(f"Error moving database: {e}")
-
-    def init_db(self, app):
-        """Initialize database and migrate data if empty"""
-        with app.app_context():
-            db.create_all()
-            
-            # Schema Migration: Check for email column in user table
-            try:
-                from sqlalchemy import inspect, text
-                inspector = inspect(db.engine)
-                if 'user' in inspector.get_table_names():
-                    columns = [c['name'] for c in inspector.get_columns('user')]
-                    if 'email' not in columns:
-                        print("Migrating schema: Adding email column to user table")
-                        with db.engine.connect() as conn:
-                            conn.execute(text('ALTER TABLE "user" ADD COLUMN email VARCHAR(120)'))
-                            conn.commit()
-            except Exception as e:
-                print(f"Schema migration error (email column): {e}")
-
-            # Schema Migration: Check for stardust column in user table
-            try:
-                from sqlalchemy import inspect, text
-                inspector = inspect(db.engine)
-                columns = [c['name'] for c in inspector.get_columns('user')]
-                if 'stardust' not in columns:
-                    print("Migrating schema: Adding stardust column to user table")
-                    with db.engine.connect() as conn:
-                        conn.execute(text('ALTER TABLE "user" ADD COLUMN stardust INTEGER DEFAULT 0'))
-                        conn.commit()
-            except Exception as e:
-                print(f"Schema migration error (stardust column): {e}")
-
-            # Performance Optimization: Ensure index exists on category
-            try:
-                from sqlalchemy import text
-                # SQLite syntax for creating index if not exists
-                db.session.execute(text("CREATE INDEX IF NOT EXISTS idx_question_category ON question (category)"))
-                db.session.commit()
-            except Exception as e:
-                # Ignore errors if index creation fails (e.g. not supported or other DB issues)
-                print(f"Note: Index optimization check: {e}")
-
-            if Question.query.count() == 0:
-                self.migrate_from_files()
-            
-            # Create default admin if NO admin exists
-            if User.query.filter_by(is_admin=True).count() == 0:
-                admin = User(username='admin', is_admin=True)
-                admin.set_password('admin123')
-                db.session.add(admin)
-                db.session.commit()
-                print("Created default admin user (admin/admin123) because no admin existed.")
-
-    def migrate_from_files(self):
-        print("Migrating data from files to SQLite...")
-        # Migrate Questions
-        if os.path.exists(self.config.DATA_FILE):
-            try:
-                with open(self.config.DATA_FILE, 'r', encoding='utf-8') as f:
-                    lines = f.readlines()
-                
-                for line in lines:
-                    line = line.strip()
-                    if not line: continue
-                    parts = line.split('|')
-                    if len(parts) >= 3:
-                        content = parts[0].replace('[NEWLINE]', '\n')
-                        answer = parts[1]
-                        score = int(parts[2])
-                        image = parts[3] if len(parts) >= 4 else ''
-                        category = parts[4] if len(parts) >= 5 else '默认题集'
-                        
-                        q = Question(content=content, answer=answer, score=score, image=image, category=category)
-                        db.session.add(q)
-                db.session.commit()
-                print("Questions migrated.")
-            except Exception as e:
-                print(f"Error migrating questions: {e}")
-
-        # Migrate Results
-        if os.path.exists(self.config.RESULTS_FILE):
-            try:
-                with open(self.config.RESULTS_FILE, 'r', encoding='utf-8') as f:
-                    results = json.load(f)
-                
-                for r in results:
-                    result = ExamResult(
-                        id=r['id'],
-                        timestamp=r['timestamp'],
-                        total_score=r['total_score'],
-                        max_score=r['max_score']
-                    )
-                    result.details = r['details']
-                    db.session.add(result)
-                db.session.commit()
-                print("Results migrated.")
-            except Exception as e:
-                print(f"Error migrating results: {e}")
-
-    def load_questions(self):
-        questions = Question.query.order_by(Question.id).all()
-        return [q.to_dict() for q in questions]
-
-    def get_question(self, q_id):
-        q = Question.query.get(q_id)
-        return q.to_dict() if q else None
-
-    def save_question(self, content, answer, score, image='', category='默认题集'):
-        q = Question(content=content, answer=answer, score=score, image=image, category=category)
-        db.session.add(q)
-        db.session.commit()
-        self.export_questions_to_txt()
-
-    def update_question(self, q_id, content, answer, score, image=None, category=None):
-        q = Question.query.get(q_id)
-        if q:
-            q.content = content
-            q.answer = answer
-            q.score = score
-            if image is not None:
-                q.image = image
-            if category is not None:
-                q.category = category
-            db.session.commit()
-            self.export_questions_to_txt()
-
-    def delete_question(self, q_id):
-        q = Question.query.get(q_id)
-        if q:
-            db.session.delete(q)
-            db.session.commit()
-            self.export_questions_to_txt()
-            return q.image
-        return None
+        # 兼容 Celery worker 启动时无 SQLite 迁移需求
+        pass
 
     def export_questions_to_txt(self):
-        """Syncs the current database state to questions.txt for the C core."""
+        """
+        导出所有题目到 questions.txt，格式：题目|答案|分值|图片文件名|类别
+        """
+        questions = Question.query.order_by(Question.id).all()
+        lines = []
+        for q in questions:
+            content = q.content.replace('\n', '[NEWLINE]') if q.content else ''
+            answer = q.answer if q.answer else ''
+            score = str(q.score) if q.score is not None else '0'
+            image = q.image if q.image else ''
+            category = q.category if q.category else '默认题集'
+            line = f"{content}|{answer}|{score}|{image}|{category}"
+            lines.append(line)
+        data_file = getattr(self.config, 'DATA_FILE', 'questions.txt')
         try:
-            questions = Question.query.order_by(Question.id).all()
-            with open(self.config.DATA_FILE, 'w', encoding='utf-8') as f:
-                for q in questions:
-                    # Replace newlines with [NEWLINE] marker as expected by some parsers
-                    # or just keep it single line if C parser doesn't handle [NEWLINE] explicitly
-                    # The README says use [NEWLINE], so we will.
-                    content = q.content.replace('\n', '[NEWLINE]')
-                    # Format: Content|Answer|Score
-                    # Note: C core currently ignores image/category, so we stick to the basic 3 fields
-                    # to ensure compatibility.
-                    line = f"{content}|{q.answer}|{q.score}\n"
-                    f.write(line)
-            print(f"Successfully synced {len(questions)} questions to {self.config.DATA_FILE}")
+            with open(data_file, 'w', encoding='utf-8') as f:
+                f.write('\n'.join(lines))
+            print(f"[DataManager] 已导出所有题目到 {data_file}")
         except Exception as e:
-            print(f"Error syncing to questions.txt: {e}")
-
-    # Deprecated but kept for compatibility if needed (though we should avoid using it)
+            print(f"[DataManager] 导出题目失败: {e}")
     def save_all_questions(self, questions):
         # This is hard to map to DB efficiently without IDs.
         # We will avoid using this in the new app.py
@@ -357,12 +216,19 @@ class DataManager:
 
 
     def create_user(self, username, password, is_admin=False):
+        print(f"[调试] 进入 create_user: username={username}, is_admin={is_admin}")
+        all_users = User.query.all()
+        print(f"[调试] 当前所有用户名: {[u.username for u in all_users]}")
         if User.query.filter_by(username=username).first():
+            print(f"[调试] 用户名 {username} 已存在，注册失败")
             return False
         user = User(username=username, is_admin=is_admin)
         user.set_password(password)
+        print(f"[调试] 即将 add 用户: {user.username}")
         db.session.add(user)
+        print(f"[调试] 已 add 用户: {user.username}，准备 commit")
         db.session.commit()
+        print(f"[调试] 已 commit 用户: {user.username}")
         return True
 
     def get_user_dashboard_stats(self, user_id):
@@ -522,4 +388,45 @@ class DataManager:
             'global': global_leaderboard[:10], # Top 10
             'categories': category_leaderboards
         }
+
+    def init_db(self, app):
+        with app.app_context():
+            db.create_all()
+            if User.query.filter_by(is_admin=True).count() == 0:
+                admin = User(username='admin', is_admin=True)
+                admin.set_password('admin123')
+                db.session.add(admin)
+                db.session.commit()
+                print("Created default admin user (admin/admin123) because no admin existed.")
+
+    def get_question(self, q_id):
+        q = Question.query.get(q_id)
+        return q.to_dict() if q else None
+
+    def update_question(self, q_id, content, answer, score, image=None, category=None):
+        q = Question.query.get(q_id)
+        if q:
+            q.content = content
+            q.answer = answer
+            q.score = score
+            if image is not None:
+                q.image = image
+            if category is not None:
+                q.category = category
+            db.session.commit()
+            self.export_questions_to_txt()
+    
+    def delete_question(self, q_id):
+        q = Question.query.get(q_id)
+        if not q:
+            return None
+        image_filename = q.image if q.image else None
+        db.session.delete(q)
+        db.session.commit()
+        self.export_questions_to_txt()
+        return image_filename
+
+    def load_questions(self):
+        questions = Question.query.order_by(Question.id).all()
+        return [q.to_dict() for q in questions]
 

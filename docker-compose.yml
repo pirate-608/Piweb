@@ -21,13 +21,13 @@ services:
       # Mount uploads directory for images
       - ./web/static/uploads:/app/web/static/uploads
     # Enable Gunicorn reload for development
-    command: ["sh", "-c", "python web/wait_for_db.py && gunicorn --worker-class eventlet --reload --bind 0.0.0.0:8080 web.app:app"]
+    command: ["sh", "-c", "python web/wait_for_db.py && gunicorn --worker-class eventlet --bind 0.0.0.0:8080 web.app:app"]
 
   worker:
     build: .
     restart: always
     # Use watchmedo (from watchdog) to auto-restart celery on code changes
-    command: ["watchmedo", "auto-restart", "--directory=.", "--pattern=*.py", "--recursive", "--", "celery", "-A", "celery_worker", "worker", "--loglevel=info"]
+    command: ["watchmedo", "auto-restart", "--directory=web", "--pattern=*.py", "--recursive", "--", "celery", "-A", "web.celery_worker.celery", "worker", "--loglevel=info"]
     environment:
       - DATABASE_URL=postgresql://postgres:postgres@db:5432/grading_system
       - REDIS_HOST=redis
@@ -41,7 +41,7 @@ services:
       - ./questions.txt:/app/questions.txt
       # Mount source code to keep worker in sync
       - ./web:/app/web
-      - ./celery_worker.py:/app/celery_worker.py
+      - ./web/celery_worker.py:/app/web/celery_worker.py
 
   redis:
     image: redis:alpine

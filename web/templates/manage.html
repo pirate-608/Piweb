@@ -70,6 +70,7 @@
                     <div class="btn-group" role="group">
                         <a href="{{ url_for('admin.edit_question', id=q.id) }}" class="btn btn-warning btn-sm text-white">编辑</a>
                         <form action="{{ url_for('admin.delete_question', id=q.id) }}" method="POST" onsubmit="return confirm('确定要删除这道题目吗？');" style="display: inline-block;">
+                            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
                             <button type="submit" class="btn btn-danger btn-sm ms-1">删除</button>
                         </form>
                     </div>

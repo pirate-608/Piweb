@@ -1,8 +1,6 @@
-
-
 from flask import Blueprint, render_template, request, redirect, url_for, flash, session, current_app, Response
 from flask_login import login_required, current_user
-from extensions import db, data_manager
+from web.extensions import db
 from web.models import User
 import random
 import io
@@ -25,8 +23,9 @@ def batch_delete_history():
         flash('未选择任何记录', 'warning')
         return redirect(url_for('exam.history'))
     deleted = 0
+    data_manager = getattr(current_app, 'data_manager', None)
     for rid in ids:
-        if data_manager.delete_result(rid):
+        if data_manager and data_manager.delete_result(rid):
             deleted += 1
     flash(f'已批量删除 {deleted} 条记录', 'success')
     return redirect(url_for('exam.history'))
@@ -34,7 +33,8 @@ def batch_delete_history():
 @exam_bp.route('/select_set')
 @login_required
 def select_set():
-    questions = data_manager.load_questions()
+    data_manager = getattr(current_app, 'data_manager', None)
+    questions = data_manager.load_questions() if data_manager else []
     if not questions:
         flash('题库为空，请先添加题目！', 'warning')
         return redirect(url_for('main.index'))
@@ -66,7 +66,8 @@ def exam():
     if not session.get('in_exam'):
         return redirect(url_for('main.index'))
 
-    all_questions = data_manager.load_questions()
+    data_manager = getattr(current_app, 'data_manager', None)
+    all_questions = data_manager.load_questions() if data_manager else []
     
     current_category = session.get('exam_category', 'all')
     if current_category != 'all':
@@ -139,7 +140,8 @@ def queue_status(task_id):
 @login_required
 def history():
     user_id = None if current_user.is_admin else current_user.id
-    results = data_manager.load_results(user_id=user_id)
+    data_manager = getattr(current_app, 'data_manager', None)
+    results = data_manager.load_results(user_id=user_id) if data_manager else []
     results.sort(key=lambda x: x['timestamp'], reverse=True)
     
     q = request.args.get('q', '').strip()
@@ -159,7 +161,8 @@ def history():
 @exam_bp.route('/history/view/<result_id>')
 @login_required
 def view_history(result_id):
-    record = data_manager.get_result(result_id)
+    data_manager = getattr(current_app, 'data_manager', None)
+    record = data_manager.get_result(result_id) if data_manager else None
     if not record:
         flash('记录未找到', 'error')
         return redirect(url_for('exam.history'))

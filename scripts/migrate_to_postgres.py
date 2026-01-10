@@ -8,7 +8,7 @@ os.environ['SKIP_INIT_DB'] = 'true'
 # Add web directory to path
 sys.path.append(os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), 'web'))
 
-from app import app, db
+from web.app import app, db
 from models import User, Question, ExamResult, UserCategoryStat, UserPermission, SystemSetting
 from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker, make_transient

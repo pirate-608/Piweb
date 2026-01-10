@@ -6,7 +6,7 @@ from datetime import datetime
 from flask import Blueprint, render_template, request, redirect, url_for, flash, current_app, abort
 from flask_login import login_required, current_user
 from werkzeug.utils import secure_filename
-from extensions import db, data_manager
+from web.extensions import db
 from web.models import Board, Topic, Post, TopicLike, PostLike, TopicView, SystemSetting
 from config import Config
 import math
@@ -54,6 +54,7 @@ def update_hotness_manually():
         
     topics = Topic.query.all()
     weights = get_hotness_weights()
+    data_manager = getattr(current_app, 'data_manager', None)
     count = 0
     for t in topics:
         t.hotness = calculate_topic_hotness(t, weights)

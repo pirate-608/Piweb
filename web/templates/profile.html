@@ -111,27 +111,27 @@
                     
                     <div class="mb-3">
                         <label for="username" class="form-label">用户名</label>
-                        <input type="text" class="form-control" id="username" name="username" value="{{ current_user.username }}">
+                        <input type="text" class="form-control" id="username" name="username" value="{{ current_user.username }}" autocomplete="username">
                     </div>
 
                     <div class="mb-3">
                         <label for="email" class="form-label">邮箱</label>
-                        <input type="email" class="form-control" id="email" name="email" value="{{ current_user.email or '' }}" placeholder="设置邮箱以便找回密码">
+                        <input type="email" class="form-control" id="email" name="email" value="{{ current_user.email or '' }}" placeholder="设置邮箱以便找回密码" autocomplete="email">
                     </div>
 
                     <div class="mb-3">
                         <label for="new_password" class="form-label">新密码 <small class="text-muted">(留空则不修改)</small></label>
-                        <input type="password" class="form-control" id="new_password" name="new_password">
+                        <input type="password" class="form-control" id="new_password" name="new_password" autocomplete="new-password">
                     </div>
 
                     <div class="mb-3">
                         <label for="confirm_password" class="form-label">确认新密码</label>
-                        <input type="password" class="form-control" id="confirm_password" name="confirm_password">
+                        <input type="password" class="form-control" id="confirm_password" name="confirm_password" autocomplete="new-password">
                     </div>
 
                     <div class="mb-3">
                         <label for="current_password" class="form-label">当前密码 <span class="text-danger">*</span> <small class="text-muted">(修改任何信息都需要验证)</small></label>
-                        <input type="password" class="form-control" id="current_password" name="current_password" required>
+                        <input type="password" class="form-control" id="current_password" name="current_password" required autocomplete="current-password">
                     </div>
 
                     <div class="d-grid gap-2">
@@ -225,9 +225,17 @@
                 {% endif %}
             </div>
 
+
+        <div class="container mt-4 mb-5">
+            <div class="row justify-content-center">
+                <div class="col-md-8">
+                    <form method="post" action="{{ url_for('auth.delete_account') }}" onsubmit="return confirm('确定要注销并永久删除您的账户吗？此操作不可恢复！');">
+                        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                        <button type="submit" class="btn btn-outline-danger w-100 mt-4">
+                            <i class="bi bi-trash"></i> 注销并永久删除账户
+                        </button>
+                    </form>
+                </div>
+            </div>
         </div>
-    </div>
-</div>
-</div>
-</div>
-{% endblock %}
+        {% endblock %}

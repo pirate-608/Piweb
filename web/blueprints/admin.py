@@ -3,7 +3,8 @@ import uuid
 import mimetypes
 from flask import Blueprint, render_template, request, redirect, url_for, flash, current_app
 from flask_login import login_required, current_user
-from extensions import db, data_manager
+from web.extensions import db
+from flask import current_app
 from web.models import User, SystemSetting, UserCategoryStat
 
 admin_bp = Blueprint('admin', __name__)
@@ -97,10 +98,10 @@ def user_detail(user_id):
     if not current_user.is_admin:
         flash('您没有权限访问此页面', 'danger')
         return redirect(url_for('main.index'))
-    
+
     user = User.query.get_or_404(user_id)
-    
-    leaderboard = data_manager.get_leaderboard_data()
+    data_manager = getattr(current_app, 'data_manager', None)
+    leaderboard = data_manager.get_leaderboard_data() if data_manager else {'global': [], 'categories': {}}
     rank = '未上榜'
     for i, user_stat in enumerate(leaderboard['global']):
         if user_stat['username'] == user.username:
@@ -186,8 +187,9 @@ def manage():
     search = request.args.get('search', '')
     category = request.args.get('category', '')
     
-    pagination = data_manager.get_questions_paginated(page=page, per_page=10, search=search, category=category)
-    categories = data_manager.get_categories()
+    data_manager = getattr(current_app, 'data_manager', None)
+    pagination = data_manager.get_questions_paginated(page=page, per_page=10, search=search, category=category) if data_manager else type('Pagination', (), {'items': [], 'pages': 0, 'page': 1})()
+    categories = data_manager.get_categories() if data_manager else []
     
     return render_template('manage.html', 
                          questions=pagination.items, 
@@ -200,25 +202,26 @@ def manage():
 @login_required
 def add():
     from web.models import UserPermission
+    data_manager = getattr(current_app, 'data_manager', None)
     has_perm = UserPermission.query.filter_by(user_id=current_user.id).first() is not None
-    
+
     if not current_user.is_admin and not has_perm:
         flash('您没有权限访问该页面', 'danger')
         return redirect(url_for('main.index'))
-        
+
     if request.method == 'POST':
         contents = request.form.getlist('content[]')
         answers = request.form.getlist('answer[]')
         scores = request.form.getlist('score[]')
         categories = request.form.getlist('category[]')
         images = request.files.getlist('image[]')
-        
+
         if contents and answers and scores:
             for i, (c, a, s) in enumerate(zip(contents, answers, scores)):
                 if c and a and s:
                     cat = categories[i] if i < len(categories) and categories[i] else '默认题集'
                     if not current_user.is_admin:
-                        if not data_manager.check_permission(current_user.id, cat):
+                        if data_manager and not data_manager.check_permission(current_user.id, cat):
                             flash(f'您没有权限添加 "{cat}" 类别的题目', 'danger')
                             continue
 
@@ -230,13 +233,15 @@ def add():
                             flash(f'第 {i+1} 题图片上传失败: {error}', 'warning')
                         elif filename:
                             image_filename = filename
-                    
-                    data_manager.save_question(c, a, int(s), image_filename, cat)
-            
+
+                    if data_manager:
+                        data_manager.save_question(c, a, int(s), image_filename, cat)
+
             flash('题目添加处理完成！', 'success')
             return redirect(url_for('admin.manage'))
             
-    return render_template('add.html', categories=data_manager.get_categories())
+    data_manager = getattr(current_app, 'data_manager', None)
+    return render_template('add.html', categories=data_manager.get_categories() if data_manager else [])
 
 @admin_bp.route('/delete/<int:id>', methods=['POST'])
 @login_required
@@ -244,8 +249,9 @@ def delete_question(id):
     if not current_user.is_admin:
         flash('您没有权限执行此操作', 'danger')
         return redirect(url_for('main.index'))
-        
-    image_filename = data_manager.delete_question(id)
+
+    data_manager = getattr(current_app, 'data_manager', None)
+    image_filename = data_manager.delete_question(id) if data_manager else None
     if image_filename:
         image_path = os.path.join(current_app.config['UPLOAD_FOLDER'], image_filename)
         if os.path.exists(image_path):
@@ -262,7 +268,8 @@ def edit_question(id):
         flash('您没有权限执行此操作', 'danger')
         return redirect(url_for('main.index'))
         
-    question = data_manager.get_question(id)
+    data_manager = getattr(current_app, 'data_manager', None)
+    question = data_manager.get_question(id) if data_manager else None
     if not question:
         return redirect(url_for('admin.manage'))
     

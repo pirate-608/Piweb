@@ -33,5 +33,8 @@ EXPOSE 8080
 
 # Command to run the application using Gunicorn with Eventlet for SocketIO support
 # Wait for DB first, then start app
-# -w 4: Use 4 workers to handle higher concurrency (Web IO)
+# ====== 开发模式（热重载） ======
+#CMD ["sh", "-c", "python web/wait_for_db.py && FLASK_APP=web/app.py FLASK_ENV=development flask run --host=0.0.0.0 --port=8080"]
+
+# ====== 生产模式（高并发） ======
 CMD ["sh", "-c", "python web/wait_for_db.py && gunicorn --worker-class eventlet -w 4 --bind 0.0.0.0:8080 web.app:app"]

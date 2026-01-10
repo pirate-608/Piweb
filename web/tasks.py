@@ -1,32 +1,34 @@
 import ctypes
 from datetime import datetime
-from config import Config
-from models import db
-from utils.data_manager import DataManager
 from celery import shared_task
-from flask_socketio import SocketIO
 
-# Load C Library globally for the worker process
-try:
-    if Config.system_name == 'Windows':
-        pass
-        
-    lib = ctypes.CDLL(Config.DLL_PATH)
-    lib.calculate_score.argtypes = [ctypes.c_char_p, ctypes.c_char_p, ctypes.c_int]
-    lib.calculate_score.restype = ctypes.c_int
-    print(f"[Celery] Successfully loaded DLL from {Config.DLL_PATH}")
-except Exception as e:
-    print(f"[Celery] Error loading DLL: {e}")
-    lib = None
+# 延迟导入配置和依赖，防止循环依赖
+def get_config():
+    from config import Config
+    return Config
 
-# Standalone SocketIO Client for the Worker to emit events
-# Note: config.py must have CELERY_BROKER_URL defined properly
-# We use the same message queue as the server
-try:
-    socket_emitter = SocketIO(message_queue=Config.CELERY_BROKER_URL)
-except Exception as e:
-    print(f"[Celery] Warning: SocketIO emitter init failed: {e}")
-    socket_emitter = None
+def get_socket_emitter():
+    from flask_socketio import SocketIO
+    Config = get_config()
+    try:
+        return SocketIO(message_queue=Config.CELERY_BROKER_URL)
+    except Exception as e:
+        print(f"[Celery] Warning: SocketIO emitter init failed: {e}")
+        return None
+
+def get_lib():
+    Config = get_config()
+    try:
+        if Config.system_name == 'Windows':
+            return None
+        lib = ctypes.CDLL(Config.DLL_PATH)
+        lib.calculate_score.argtypes = [ctypes.c_char_p, ctypes.c_char_p, ctypes.c_int]
+        lib.calculate_score.restype = ctypes.c_int
+        print(f"[Celery] Successfully loaded DLL from {Config.DLL_PATH}")
+        return lib
+    except Exception as e:
+        print(f"[Celery] Error loading DLL: {e}")
+        return None
 
 @shared_task(bind=True)
 def grade_exam_task(self, user_id, data):
@@ -34,8 +36,12 @@ def grade_exam_task(self, user_id, data):
     Celery task to grade exam.
     data: { 'ids': [], 'user_answers': {}, 'all_questions': [] }
     """
+    Config = get_config()
+    lib = get_lib()
+    socket_emitter = get_socket_emitter()
+    from utils.data_manager import DataManager
     task_id = self.request.id
-    
+
     # Notify start
     if socket_emitter:
         try:
@@ -48,7 +54,7 @@ def grade_exam_task(self, user_id, data):
     ids = data['ids']
     user_answers_map = data['user_answers']
     all_questions = data['all_questions']
-    
+
     total_score = 0
     results = []
     exam_questions = []

@@ -7,7 +7,7 @@
     <li class="nav-item" role="presentation">
         <button class="nav-link active" id="global-tab" data-bs-toggle="tab" data-bs-target="#global" type="button" role="tab" aria-controls="global" aria-selected="true">全站排名</button>
     </li>
-    {% for cat in category_leaderboards.keys() %}
+    {% for cat in leaderboard['categories'].keys() %}
     <li class="nav-item" role="presentation">
         <button class="nav-link" id="cat-{{ loop.index }}-tab" data-bs-toggle="tab" data-bs-target="#cat-{{ loop.index }}" type="button" role="tab" aria-controls="cat-{{ loop.index }}" aria-selected="false">{{ cat }}</button>
     </li>
@@ -31,7 +31,7 @@
                             </tr>
                         </thead>
                         <tbody>
-                            {% for user in global_leaderboard %}
+                            {% for user in leaderboard['global'] %}
                             <tr>
                                 <td>
                                     {% if loop.index == 1 %}🥇
@@ -63,7 +63,7 @@
     </div>
 
     <!-- Category Leaderboards -->
-    {% for cat, leaderboard in category_leaderboards.items() %}
+    {% for cat, leaderboard_cat in leaderboard['categories'].items() %}
     <div class="tab-pane fade" id="cat-{{ loop.index }}" role="tabpanel" aria-labelledby="cat-{{ loop.index }}-tab">
         <div class="card shadow-sm">
             <div class="card-body bg-white text-dark">
@@ -80,7 +80,7 @@
                             </tr>
                         </thead>
                         <tbody>
-                            {% for user in leaderboard %}
+                            {% for user in leaderboard_cat %}
                             <tr>
                                 <td>{{ loop.index }}</td>
                                 <td>
@@ -113,10 +113,10 @@
         // Global Chart
         const globalCtx = document.getElementById('globalChart').getContext('2d');
         const globalData = {
-            labels: {{ global_leaderboard | map(attribute='username') | list | tojson }},
+            labels: {{ leaderboard['global'] | map(attribute='username') | list | tojson }},
             datasets: [{
                 label: '平均正确率 (%)',
-                data: {{ global_leaderboard | map(attribute='accuracy') | list | tojson }},
+                data: {{ leaderboard['global'] | map(attribute='accuracy') | list | tojson }},
                 backgroundColor: 'rgba(75, 192, 192, 0.2)',
                 borderColor: 'rgba(75, 192, 192, 1)',
                 borderWidth: 1
