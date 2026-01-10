@@ -38,6 +38,59 @@ NWW2026/
 
 ## 🚀 快速开始
 
+## 🛠️ 开发环境与高级运维说明
+
+### 开发环境下热重载模式
+
+开发调试推荐使用 Flask 的热重载：
+
+```powershell
+cd web
+set FLASK_APP=app.py
+set FLASK_ENV=development
+flask run
+```
+或直接：
+```powershell
+python app.py
+```
+此时代码变动会自动重启服务，便于调试。
+
+**注意：** 热重载仅适用于开发环境，生产环境请用 Gunicorn + Eventlet。
+
+### SQLAlchemy 多路径/多实例风险说明
+
+**严禁**在项目中多次实例化 `SQLAlchemy()` 或通过不同路径（如 web/extensions.py、web/models.py、web/blueprints/*）重复导入/创建 db 实例，否则会导致：
+- 数据库连接池混乱，session 绑定异常
+- Flask 上下文丢失，出现 `RuntimeError: No application found` 或 `UnboundExecutionError`
+- 数据写入不生效、回滚、死锁等连锁问题
+
+**最佳实践：**
+1. 只在 `web/extensions.py` 实例化一次 db，并全项目统一 `from web.extensions import db`。
+2. 不要在 models.py、blueprints、tasks.py 等文件重复 new SQLAlchemy()。
+3. 所有模型、数据操作均用同一个 db 实例。
+
+如遇到数据库写入不生效、500 错误、session 相关异常，请优先排查此问题。
+
+### Ngrok 配置与公网穿透
+
+1. 注册并下载 ngrok（https://ngrok.com/），登录后获取 authtoken。
+2. 运行：
+    ```bash
+    ngrok config add-authtoken <你的token>
+    ngrok http 5000
+    ```
+3. 生产环境建议用 Cloudflare Tunnel，开发/演示可用 ngrok，注意免费版有流量/连接数限制。
+
+### 打包发布注意事项
+
+1. 打包前请备份 `instance/` 数据库和 `uploads/` 文件夹。
+2. Windows/Linux/macOS 打包命令见下文，注意 `--add-data` 路径分隔符（Win用`;`，Linux/macOS用`:`）。
+3. 打包后首次运行请检查依赖库、动态库（如 grading.dll/so/dylib）是否被正确包含。
+4. 如需迁移数据，先运行一次程序生成目录，再覆盖数据文件。
+
+---
+
 ### Docker 一键部署（推荐）
 
 1.  **启动服务**：
@@ -327,6 +380,12 @@ pyinstaller --name auto_grader_web --onedir --add-data "web/templates:templates"
     复制终端显示的 `Forwarding` 地址 (例如 `https://xxxx-xxxx.ngrok-free.app`) 发送给其他人即可访问你的自动阅卷系统。
 
 ## 开发说明
+
+*   **热重载开发**：推荐用 Flask 的开发模式（见上文），可自动重启。
+*   **SQLAlchemy 实例唯一性**：全项目只允许一个 db 实例，详见“高级运维说明”。
+*   **ngrok/Cloudflare Tunnel**：开发可用 ngrok，生产建议用 Cloudflare Tunnel，配置见上文。
+*   **打包与迁移**：打包前务必备份数据，首次运行后再覆盖数据文件。
+*   **常见问题排查**：遇到数据库写入不生效、500 错误、session 异常，优先检查 SQLAlchemy 实例和导入路径。
 
 *   **添加题目**: 可以在 Web 界面添加（支持图片|分类(可选)和多行文本），也可以直接编辑 `questions.txt`。
     *   格式: `题目|答案|分值|图片文件名(可选)`
