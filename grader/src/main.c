@@ -1,4 +1,4 @@
-#include "common.h"
+#include "grader_common.h"
 #include <time.h>
 #ifdef _WIN32
 #include <windows.h>

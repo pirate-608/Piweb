@@ -2,6 +2,7 @@ from flask_sqlalchemy import SQLAlchemy
 from flask_login import LoginManager
 from flask_wtf.csrf import CSRFProtect
 from flask_socketio import SocketIO
+from web.config import Config
 from flask_session import Session
 from flask_migrate import Migrate
 
@@ -10,7 +11,11 @@ db = SQLAlchemy()
 migrate = Migrate()
 login_manager = LoginManager()
 csrf = CSRFProtect()
-socketio = SocketIO()
+socketio = SocketIO(
+    message_queue=Config.CELERY_BROKER_URL,
+    async_mode='eventlet',
+    cors_allowed_origins='*'
+)
 
 # Redis Access
 cache_redis = None

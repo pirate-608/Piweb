@@ -1,4 +1,4 @@
-#include "common.h"
+#include "grader_common.h"
 
 int load_questions(const char* filename, Question* q_array) {
     if (!filename || !q_array) {

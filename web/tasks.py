@@ -1,3 +1,78 @@
+from web.extensions import socketio
+from web.extensions import db, cache_redis
+from web.models import WorkshopDraft
+from flask_login import current_user
+from flask import current_app
+
+# 保存草稿Celery任务
+from celery import shared_task
+@shared_task(bind=True)
+def save_draft_task(self, user_id, title, content, description, draft_type):
+    task_id = self.request.id
+    # 推送开始
+    try:
+        socketio.emit('draft_status', {'status': 'processing', 'percent': 10, 'task_id': task_id}, room=task_id)
+    except Exception as e:
+        print(f"[Celery] SocketIO emit failed: {e}")
+    # 保存/更新草稿
+    try:
+        draft = WorkshopDraft.query.filter_by(user_id=user_id, title=title).first()
+        if draft:
+            draft.content = content
+            draft.description = description
+            draft.type = draft_type
+        else:
+            draft = WorkshopDraft(
+                user_id=user_id,
+                title=title,
+                description=description,
+                content=content,
+                type=draft_type
+            )
+            db.session.add(draft)
+        db.session.commit()
+        # 写入Redis缓存
+        if cache_redis:
+            cache_redis.setex(f"draft:{user_id}:{title}", 300, draft.content)
+
+        # 保存后自动分析内容，推送统计数据
+        stats = None
+        try:
+            from web.services.analyzer import AnalyzerService
+            import platform, os
+            system_name = platform.system()
+            if system_name == 'Windows':
+                lib_name = 'libanalyzer.dll'
+            else:
+                lib_name = 'libanalyzer.so'
+            base_dir = os.path.abspath(os.path.join(os.path.dirname(__file__), '..', 'build', 'text_analyzer'))
+            dll_path = os.path.join(base_dir, lib_name)
+            analyzer = AnalyzerService(dll_path)
+            stats = analyzer.analyze(content)
+        except Exception as e:
+            print(f"[Celery] AnalyzerService failed: {e}")
+            stats = None
+
+        # 推送完成，带上最新统计
+        try:
+            socketio.emit('draft_status', {
+                'status': 'done',
+                'percent': 100,
+                'task_id': task_id,
+                'id': draft.id,
+                'msg': '草稿已保存',
+                'stats': stats if stats and stats.get('ok') else None
+            }, room=task_id)
+        except Exception as e:
+            print(f"[Celery] SocketIO emit failed: {e}")
+        return {'success': True, 'id': draft.id, 'msg': '草稿已保存', 'stats': stats if stats and stats.get('ok') else None}
+    except Exception as e:
+        db.session.rollback()
+        try:
+            socketio.emit('draft_status', {'status': 'error', 'percent': 100, 'task_id': task_id, 'msg': str(e)}, room=task_id)
+        except Exception as e2:
+            print(f"[Celery] SocketIO emit failed: {e2}")
+        return {'success': False, 'msg': str(e)}
 import ctypes
 from datetime import datetime
 from celery import shared_task

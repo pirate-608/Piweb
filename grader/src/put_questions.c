@@ -1,4 +1,4 @@
-#include "common.h"
+#include "grader_common.h"
 
 void display_question(int index, Question q) {
     printf(ANSI_COLOR_BLUE "\n----------------------------------------\n" ANSI_COLOR_RESET);

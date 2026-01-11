@@ -199,27 +199,55 @@ def leaderboard():
 
 # ================= 工坊相关接口 =====================
 
-# 数据模型（可迁移到 web/models.py）
-class WorkshopDraft(db.Model):
-    __tablename__ = 'workshop_draft'
-    id = db.Column(db.Integer, primary_key=True)
-    user_id = db.Column(db.Integer, db.ForeignKey('user.id'))
-    title = db.Column(db.String(128), nullable=False)
-    description = db.Column(db.Text)
-    content = db.Column(db.Text)
-    type = db.Column(db.String(32))  # online/file
-    created_at = db.Column(db.DateTime, default=datetime.datetime.utcnow)
-    updated_at = db.Column(db.DateTime, default=datetime.datetime.utcnow, onupdate=datetime.datetime.utcnow)
-    user = db.relationship('User', backref='workshop_drafts')
+from web.models import WorkshopDraft
+
+from web.extensions import csrf
+from web.tasks import save_draft_task
 
 @main_bp.route('/workshop/save_draft', methods=['POST'])
+@csrf.exempt  # 临时排查CSRF拦截
 @login_required
 def save_draft():
+    import sys
+    print(f"[CSRF DEBUG] save_draft called: is_json={request.is_json}, user={getattr(current_user, 'id', None)}")
+    print(f"[CSRF DEBUG] request.cookies: {request.cookies}")
+    print(f"[CSRF DEBUG] request.headers: {dict(request.headers)}")
+    print(f"[CSRF DEBUG] session: {getattr(request, 'session', None)}")
+    sys.stdout.flush()
+    import sys
+    print(f"save_draft called: is_json={request.is_json}, user={getattr(current_user, 'id', None)}")
+    print(f"request.json: {request.json}")
+    sys.stdout.flush()
     data = request.json
-    # TODO: 数据校验与存库
-    # title, description, content, type, etc.
-    return jsonify({'success': True, 'msg': '草稿已保存', 'data': data})
+    title = (data.get('title') or '').strip()
+    content = (data.get('content') or '').strip()
+    if not title or not content:
+        return jsonify({'success': False, 'msg': '标题和正文不能为空'}), 400
+    description = data.get('description', '')
+    draft_type = data.get('mode', 'online')
+    # 提交Celery任务
+    task = save_draft_task.apply_async(args=[current_user.id, title, content, description, draft_type])
+    return jsonify({'success': True, 'msg': '草稿保存中', 'task_id': task.id})
 
+# 查询草稿保存状态接口
+@main_bp.route('/workshop/save_draft_status', methods=['GET'])
+@login_required
+def save_draft_status():
+    task_id = request.args.get('task_id')
+    if not task_id:
+        return jsonify({'success': False, 'msg': '缺少task_id'}), 400
+    from celery.result import AsyncResult
+    from flask import current_app
+    celery_app = current_app.extensions['celery']
+    result = AsyncResult(task_id, app=celery_app)
+    if result.state == 'PENDING':
+        return jsonify({'success': False, 'status': 'pending'})
+    elif result.state == 'SUCCESS':
+        return jsonify({'success': True, 'status': 'done', 'result': result.result})
+    elif result.state == 'FAILURE':
+        return jsonify({'success': False, 'status': 'error', 'msg': str(result.result)})
+    else:
+        return jsonify({'success': False, 'status': result.state})
 @main_bp.route('/workshop/upload_file', methods=['POST'])
 @login_required
 def upload_file():
@@ -228,22 +256,72 @@ def upload_file():
     # 返回txt内容
     return jsonify({'success': True, 'content': '示例txt内容'})
 
+
 @main_bp.route('/workshop/analyze', methods=['POST'])
 @login_required
 def analyze():
+    print("Analyzer route called")
     text = request.json.get('content', '')
-    # TODO: 调用C分析库，返回统计信息
-    return jsonify({'success': True, 'stats': {'words': 100, 'sections': 3}})
+    # 调用C分析库
+    from web.services.analyzer import AnalyzerService
+    import platform
+    import os
+    # 动态库路径
+    system_name = platform.system()
+    if system_name == 'Windows':
+        lib_name = 'libanalyzer.dll'
+    else:
+        lib_name = 'libanalyzer.so'
+    # Docker容器内工作目录通常为/app，build目录在/app/build/text_analyzer
+    base_dir = os.path.abspath(os.path.join(os.path.dirname(__file__), '..', '..'))
+    dll_path = os.path.join(base_dir, 'build', 'text_analyzer', lib_name)
+    try:
+        analyzer = AnalyzerService(dll_path)
+        stats = analyzer.analyze(text)
+        print(f"Analyzer stats: {stats}")
+    except Exception as e:
+        import traceback
+        print(f"Analyzer route exception: {e}\n{traceback.format_exc()}")
+        return jsonify({'success': False, 'msg': str(e)})
+    if not stats.get('ok'):
+        print(f"Analyzer failed: {stats.get('msg', '分析失败')}")
+        return jsonify({'success': False, 'msg': stats.get('msg', '分析失败')})
+    # 目录联动：sections为[{title:..., start:..., end:...}, ...]
+    return jsonify({'success': True, 'stats': stats})
 
 @main_bp.route('/workshop/my_drafts', methods=['GET'])
 @login_required
 def my_drafts():
-    # TODO: 查询当前用户草稿
-    return jsonify({'success': True, 'drafts': []})
+    # 查询当前用户所有草稿，按更新时间倒序
+    drafts = WorkshopDraft.query.filter_by(user_id=current_user.id).order_by(WorkshopDraft.updated_at.desc()).all()
+    draft_list = [
+        {
+            'id': d.id,
+            'title': d.title,
+            'description': d.description,
+            'updated_at': d.updated_at.strftime('%Y-%m-%d %H:%M'),
+        } for d in drafts
+    ]
+    return jsonify({'success': True, 'drafts': draft_list})
 
 @main_bp.route('/workshop/draft/<int:draft_id>', methods=['GET'])
 @login_required
 def get_draft(draft_id):
-    # TODO: 查询草稿详情
-    return jsonify({'success': True, 'draft': {}})
+    draft = WorkshopDraft.query.filter_by(id=draft_id, user_id=current_user.id).first()
+    if not draft:
+        return jsonify({'success': False, 'msg': '草稿不存在'}), 404
+    data = {
+        'id': draft.id,
+        'title': draft.title,
+        'description': draft.description,
+        'content': draft.content,
+        'type': draft.type,
+        'updated_at': draft.updated_at.strftime('%Y-%m-%d %H:%M'),
+    }
+    return jsonify({'success': True, 'draft': data})
+
+@main_bp.route('/workshop/editor', methods=['GET'])
+@login_required
+def workshop_editor():
+    return render_template('workshop/editor.html')
 # ================= 工坊相关接口 END =====================

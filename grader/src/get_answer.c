@@ -1,4 +1,4 @@
-#include "common.h"
+#include "grader_common.h"
 
 void get_user_input(char* buffer, int size) {
     if (!buffer || size <= 0) {

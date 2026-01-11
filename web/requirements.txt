@@ -1,7 +1,7 @@
-Flask
+Flask>=2.2
 Flask-SQLAlchemy
 Flask-Login
-Flask-WTF
+Flask-WTF>=1.1
 waitress
 psycopg2
 Flask
@@ -14,10 +14,10 @@ celery
 gunicorn
 eventlet
 requests
-itsdangerous
+itsdangerous>=2.0
 werkzeug
 python-dotenv
-Flask-Session
+Flask-Session>=0.5
 Flask-Cors
 Flask-SocketIO
 pillow

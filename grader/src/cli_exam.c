@@ -1,4 +1,4 @@
-#include "common.h"
+#include "grader_common.h"
 #include <time.h>
 #include <stdlib.h>
 #include <stdio.h>

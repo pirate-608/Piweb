@@ -60,7 +60,7 @@ class Config:
         BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
         
         # Data Paths
-        DLL_PATH = os.path.join(BASE_DIR, 'grader', 'build', LIB_NAME)
+        DLL_PATH = os.path.join(BASE_DIR, 'build', 'grader', LIB_NAME)
         DATA_FILE = os.path.join(BASE_DIR, 'questions.txt')
         RESULTS_FILE = os.path.join(BASE_DIR, 'results.json')
         
@@ -119,7 +119,7 @@ class Config:
     CELERY_RESULT_BACKEND = f'redis://{REDIS_HOST}:{REDIS_PORT}/0'
 
     # Flask-Session Config
-    SESSION_TYPE = 'redis'
+    SESSION_TYPE = os.environ.get('SESSION_TYPE', 'redis')
     SESSION_PERMANENT = False
     SESSION_USE_SIGNER = True
     SESSION_KEY_PREFIX = 'grading:session:'

@@ -1,4 +1,4 @@
-#include "common.h"
+#include "grader_common.h"
 #include <ctype.h>
 
 #define MIN(a,b) (((a)<(b))?(a):(b))

@@ -42,11 +42,25 @@ def select_set():
         return redirect(url_for('main.index'))
         
     categories = {}
+    category_types = {}
+    # 兼容个人题库机制：如题目有 'is_personal' 字段则标记，否则默认为公共题库
     for q in questions:
         cat = q.get('category', '默认题集')
         categories[cat] = categories.get(cat, 0) + 1
-        
-    return render_template('select_set.html', categories=categories, total_count=len(questions))
+        # 个人题库机制：如果题目有 is_personal 字段且为 True，则标记为个人题库
+        if q.get('is_personal'):
+            category_types[cat] = 'personal'
+        else:
+            # 若未标记则默认为公共题库
+            if cat not in category_types:
+                category_types[cat] = 'public'
+    
+    return render_template(
+        'select_set.html',
+        categories=categories,
+        total_count=len(questions),
+        category_types=category_types
+    )
 
 @exam_bp.route('/start_exam')
 @login_required
@@ -75,7 +89,17 @@ def exam():
     if current_category != 'all':
         filtered_ids = [q['id'] for q in all_questions if q.get('category', '默认题集') == current_category]
     else:
-        filtered_ids = [q['id'] for q in all_questions]
+        # 综合测试：包含所有公共题目和当前用户的个人题目
+        filtered_ids = []
+        for q in all_questions:
+            if not q.get('is_personal'):
+                filtered_ids.append(q['id'])
+            else:
+                # 个人题目需属于当前用户
+                owned = getattr(current_user, 'owned_categories', None)
+                cat = q.get('category', '默认题集')
+                if owned and cat in owned:
+                    filtered_ids.append(q['id'])
 
     if not filtered_ids:
         session.pop('in_exam', None)

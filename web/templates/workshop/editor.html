@@ -1,0 +1,73 @@
+{% extends 'base.html' %}
+{% block title %}工坊创作{% endblock %}
+{% block content %}
+<div class="container mt-4">
+  <div class="card">
+    <div class="card-header">
+      <h4>工坊创作</h4>
+    </div>
+    <div class="card-body">
+      <form id="workshop-form" method="post" enctype="multipart/form-data">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+        <div class="mb-3">
+          <label class="form-label">标题</label>
+          <input type="text" class="form-control" name="title" id="title" placeholder="请输入作品标题" required>
+          <div class="invalid-feedback">请填写此字段</div>
+        </div>
+        <div class="mb-3">
+          <label class="form-label">作品说明</label>
+          <textarea class="form-control" name="description" id="description" rows="3" placeholder="支持Markdown"></textarea>
+        </div>
+        <div class="mb-3">
+          <label class="form-label">创作方式</label>
+          <div>
+            <input type="radio" name="mode" value="online" checked> 在线创作
+            <input type="radio" name="mode" value="upload" class="ms-3"> 上传文件
+          </div>
+        </div>
+        <div class="mb-3" id="online-editor">
+          <label class="form-label">正文内容（支持#分章节）</label>
+          <textarea class="form-control" name="content" id="content" rows="10" placeholder="正文内容"></textarea>
+          <div class="invalid-feedback">请填写此字段</div>
+          <div class="form-text text-info">章节格式：<b># 标题</b>（#后需有空格，否则不识别为章节）</div>
+        </div>
+        <div class="mb-3 d-none" id="upload-area">
+          <label class="form-label">上传文件</label>
+          <input type="file" class="form-control" name="file" id="file">
+          <div class="invalid-feedback">请填写此字段</div>
+          <div class="form-text">支持 txt, md, pdf, docx 文件</div>
+        </div>
+        <button type="button" class="btn btn-primary" id="save-btn">保存草稿</button>
+      </form>
+      <hr>
+      <div id="stats-area" class="mt-3">
+        <h5>统计信息</h5>
+        <div>总字数：<span id="stat-words">0</span>，中文字符：<span id="stat-cn">0</span>，英文单词：<span id="stat-en">0</span>，丰富度：<span id="stat-rich">0</span></div>
+        <div>高频词：<span id="stat-top"></span>，敏感词：<span id="stat-sensitive"></span></div>
+      </div>
+      <hr>
+      <div id="sections-area" class="mt-3">
+        <h5>章节目录</h5>
+        <ul id="section-list"></ul>
+      </div>
+    </div>
+  </div>
+</div>
+<script src="/static/js/socket.io.min.js"></script>
+<script src="/static/js/workshop_editor.js"></script>
+<script>
+// 简单切换编辑/上传区
+const modeRadios = document.getElementsByName('mode');
+const onlineEditor = document.getElementById('online-editor');
+const uploadArea = document.getElementById('upload-area');
+modeRadios.forEach(r => r.addEventListener('change', function() {
+  if (this.value === 'online') {
+    onlineEditor.classList.remove('d-none');
+    uploadArea.classList.add('d-none');
+  } else {
+    onlineEditor.classList.add('d-none');
+    uploadArea.classList.remove('d-none');
+  }
+}));
+</script>
+{% endblock %}

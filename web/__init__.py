@@ -48,7 +48,12 @@ def create_app(config_class=Config):
     from flask_session import Session
     Session(app)
     
-    socketio.init_app(app, message_queue=app.config.get('CELERY_BROKER_URL'), async_mode='eventlet', cors_allowed_origins='*')
+    socketio.init_app(
+        app,
+        message_queue=app.config.get('CELERY_BROKER_URL'),
+        async_mode='eventlet',
+        cors_allowed_origins='*'
+    )
     csrf.init_app(app)
     login_manager.init_app(app)
     login_manager.login_view = 'auth.login' # Updated to blueprint endpoint
@@ -56,6 +61,8 @@ def create_app(config_class=Config):
     # Initialize Data Manager DB
     if not os.environ.get('SKIP_INIT_DB'):
         with app.app_context():
+            # 自动建表，防止新环境下表缺失
+            db.create_all()
             data_manager.init_db(app)
 
     # Initialize Grading Queue
@@ -82,9 +89,6 @@ def create_app(config_class=Config):
     app.register_blueprint(exam_bp)
     app.register_blueprint(admin_bp)
 
-    # 注册工坊 blueprint
-    from web.workshop import workshop_bp
-    app.register_blueprint(workshop_bp)
     app.register_blueprint(forum_bp) # url_prefix='/forum' defined in blueprint
 
     # Register Global Hooks

@@ -7,6 +7,7 @@ FROM python:3.11-slim
 # libpq-dev: For PostgreSQL adapter (psycopg2)
 RUN apt-get update && apt-get install -y \
     gcc \
+    g++ \
     ninja-build \
     cmake \
     libpq-dev \
@@ -22,7 +23,11 @@ RUN pip install --no-cache-dir -r requirements.txt
 # Copy the entire project
 COPY . .
 
-RUN cmake -S . -B build -G Ninja && cmake --build build --target grader_libgrading_so
+RUN cmake -S . -B build -G Ninja \
+    -DCMAKE_BUILD_TYPE=Release \
+    -DCMAKE_C_COMPILER=gcc \
+    -DCMAKE_CXX_COMPILER=g++ \
+    && cmake --build build --config Release
 
 # Set environment variables
 ENV PYTHONPATH=/app:/app/web

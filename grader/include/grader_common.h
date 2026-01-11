@@ -1,5 +1,5 @@
-#ifndef COMMON_H
-#define COMMON_H
+#ifndef GRADER_COMMON_H
+#define GRADER_COMMON_H
 
 #include <stdio.h>
 #include <stdlib.h>
@@ -29,7 +29,6 @@ typedef struct {
     char content[MAX_STR_LEN];     // 题目
     char correct_answer[MAX_STR_LEN]; // 标准答案
     int score;                     // 分值
-    
     // 以下字段用于考后分析
     char user_answer[MAX_STR_LEN]; // 用户填写的答案
     int obtained_score;            // 用户该题得分

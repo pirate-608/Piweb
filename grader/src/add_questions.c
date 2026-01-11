@@ -1,4 +1,4 @@
-#include "common.h"
+#include "grader_common.h"
 
 void append_question_to_file(const char* filename) {
     if (!filename) {

@@ -7,6 +7,18 @@ import json
 from sqlalchemy import event
 from sqlalchemy.engine import Engine
 
+class WorkshopDraft(db.Model):
+    __tablename__ = 'workshop_draft'
+    id = db.Column(db.Integer, primary_key=True)
+    user_id = db.Column(db.Integer, db.ForeignKey('user.id'))
+    title = db.Column(db.String(128), nullable=False)
+    description = db.Column(db.Text)
+    content = db.Column(db.Text)
+    type = db.Column(db.String(32))  # online/file
+    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+    updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+    user = db.relationship('User', backref='workshop_drafts')
+
 class Post(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     topic_id = db.Column(db.Integer, db.ForeignKey('topic.id'), nullable=False)
