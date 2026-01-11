@@ -35,12 +35,13 @@ pip install pymysql cryptography
 
 ## 3. 配置文件修改
 
-打开 `web/config.py`，找到 SQLALCHEMY 相关配置。
+打开 `web/config.py`，找到 SQLALCHEMY 相关配置和 DLL 路径。
 
 **修改前 (默认)**:
 ```python
 basedir = os.path.abspath(os.path.dirname(__file__))
 SQLALCHEMY_DATABASE_URI = 'sqlite:///' + os.path.join(basedir, 'instance', 'data.db')
+DLL_PATH = os.path.join(basedir, 'build', LIB_NAME)
 ```
 
 **修改后 (示例)**:
@@ -58,6 +59,9 @@ DB_HOST = os.environ.get('DB_HOST', 'localhost')
 DB_NAME = os.environ.get('DB_NAME', 'grading_db')
 
 if os.environ.get('USE_SQL_DB'):
+    # ...
+DLL_PATH = os.path.join(basedir, 'grader', 'build', LIB_NAME)
+```
     # PostgreSQL
     SQLALCHEMY_DATABASE_URI = f'postgresql://{DB_USER}:{DB_PASS}@{DB_HOST}:5432/{DB_NAME}'
 else:

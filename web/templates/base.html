@@ -103,15 +103,13 @@
                                 <li class="nav-item">
                                     <a class="nav-link" href="{{ url_for('forum.index') }}">💬 论坛</a>
                                 </li>
-                                {% if current_user.is_admin or current_user.permissions %}
                                 <li class="nav-item">
                                     <a class="nav-link" href="{{ url_for('admin.add') }}">添加题目</a>
                                 </li>
-                                {% endif %}
-                                {% if current_user.is_admin %}
                                 <li class="nav-item">
                                     <a class="nav-link" href="{{ url_for('admin.manage') }}">管理题目</a>
                                 </li>
+                                {% if current_user.is_admin %}
                                 <li class="nav-item">
                                     <a class="nav-link" href="{{ url_for('admin.users') }}">用户管理</a>
                                 </li>

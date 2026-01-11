@@ -313,7 +313,10 @@ def view_topic(topic_id):
             ).all()
             liked_posts = {pl.post_id for pl in user_post_likes}
         
-    return render_template('forum/topic.html', topic=topic, posts=posts, user_liked=user_liked, liked_posts=liked_posts)
+    from web.utils.render_utils import render_content
+    topic_html = render_content(topic.content, getattr(topic, 'mode', 'html'))
+    posts_html = [render_content(p.content, getattr(p, 'mode', 'html')) for p in posts]
+    return render_template('forum/topic.html', topic=topic, topic_html=topic_html, posts=posts, posts_html=posts_html, user_liked=user_liked, liked_posts=liked_posts)
 
 @forum_bp.route('/topic/<int:topic_id>/reply', methods=['POST'])
 @login_required

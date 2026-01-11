@@ -1,0 +1,22 @@
+# Flask-Migrate Docker 适配说明
+
+1. requirements.txt 已添加 Flask-Migrate。
+2. Dockerfile 如需支持 flask db 命令，需确保：
+   - WORKDIR 指向 web/
+   - ENV FLASK_APP=app.py
+   - ENV FLASK_ENV=production 或 development
+   - 安装 Flask-Migrate
+3. docker-compose.yml 可加如下服务命令：
+   - flask db init
+   - flask db migrate -m "init"
+   - flask db upgrade
+   可用 entrypoint 或 command 实现自动迁移。
+4. 推荐开发环境先本地初始化迁移目录，再在容器内运行 upgrade。
+5. 生产环境建议每次部署自动执行 flask db upgrade，保证表结构一致。
+
+# 示例 Dockerfile 片段
+# ENV FLASK_APP=app.py
+# RUN flask db upgrade
+
+# 示例 docker-compose.yml 片段
+# command: bash -c "flask db upgrade && gunicorn ..."

@@ -67,7 +67,7 @@
                 {% endif %}
                 {% endif %}
             </div>
-            <div class="card-text form-content p-3 bg-light text-dark rounded" style="white-space: pre-wrap; font-size: 1.1em; color: black !important;">{{ topic.content }}</div>
+            <div class="card-text form-content p-3 bg-light text-dark rounded" style="white-space: pre-wrap; font-size: 1.1em; color: black !important;">{{ topic_html|safe }}</div>
             
             {% if topic.images %}
             <div class="mt-3">
@@ -124,7 +124,7 @@
             </div>
             {% endif %}
             
-            <p class="mb-0" style="white-space: pre-wrap;">{{ post.content }}</p>
+            <p class="mb-0" style="white-space: pre-wrap;">{{ posts_html[loop.index0]|safe }}</p>
             
             <div class="text-end mt-2">
                 <form action="{{ url_for('forum.post_action', post_id=post.id) }}" method="POST" class="d-inline me-3">
@@ -156,6 +156,14 @@
             <form action="{{ url_for('forum.reply_topic', topic_id=topic.id) }}" method="POST">
                 <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
                 <input type="hidden" name="parent_id" id="reply-parent-id" value="">
+                <div class="mb-3">
+                    <label class="form-label">内容模式</label>
+                    <select name="mode" class="form-select" style="max-width: 200px;">
+                        <option value="markdown" selected>Markdown</option>
+                        <option value="html">HTML</option>
+                    </select>
+                    <small class="text-muted">Markdown 支持常用语法，HTML 支持富文本。</small>
+                </div>
                 <div class="mb-3">
                     {% if current_user.is_muted %}
                         <textarea class="form-control" rows="3" disabled placeholder="您已被禁言，无法回复"></textarea>

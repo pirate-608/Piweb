@@ -39,9 +39,13 @@
                     <form action="{{ url_for('admin.update_announcement') }}" method="post">
                         <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
                         <div class="mb-3">
-                            <label for="announcementContent" class="form-label">公告内容 (支持 HTML)</label>
-                            <textarea class="form-control" id="announcementContent" name="content" rows="4">{{ announcement or '' }}</textarea>
-                            <div class="form-text">清空内容并保存即可隐藏公告栏。通常支持 HTML 标签用于排版。</div>
+                            <label for="announcementContent" class="form-label">公告内容</label>
+                            <select class="form-select mb-2" name="mode" id="announcementMode">
+                                <option value="html" {% if announcement_mode == 'html' %}selected{% endif %}>HTML</option>
+                                <option value="markdown" {% if announcement_mode == 'markdown' %}selected{% endif %}>Markdown</option>
+                            </select>
+                            <textarea class="form-control" id="announcementContent" name="content" rows="4">{{ announcement_raw or '' }}</textarea>
+                            <div class="form-text">可选 HTML 或 Markdown 编辑模式。Markdown 支持标题、列表、代码块等排版。</div>
                         </div>
                         <button type="submit" class="btn btn-primary btn-sm">保存公告</button>
                     </form>

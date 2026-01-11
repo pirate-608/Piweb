@@ -43,9 +43,8 @@ def create_app(config_class=Config):
 
     # Initialize Extensions
     db.init_app(app)
-    # Session(app) is initialized inside extensions? No, Session() takes app.
-    # We didn't move Session to extensions.py because it doesn't need to be imported by blueprints directly.
-    # But wait, app.py had: Session(app).
+    from web.extensions import migrate
+    migrate.init_app(app, db)
     from flask_session import Session
     Session(app)
     
@@ -82,6 +81,10 @@ def create_app(config_class=Config):
     app.register_blueprint(main_bp)
     app.register_blueprint(exam_bp)
     app.register_blueprint(admin_bp)
+
+    # 注册工坊 blueprint
+    from web.workshop import workshop_bp
+    app.register_blueprint(workshop_bp)
     app.register_blueprint(forum_bp) # url_prefix='/forum' defined in blueprint
 
     # Register Global Hooks

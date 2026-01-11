@@ -1,3 +1,7 @@
+from web.models import SystemSetting
+
+# 公告渲染辅助函数，文件顶级定义
+# (Duplicate definition removed; original is at the top of the file)
 import os
 import uuid
 import mimetypes
@@ -179,18 +183,22 @@ def update_announcement():
 @admin_bp.route('/manage')
 @login_required
 def manage():
-    if not current_user.is_admin:
-        flash('您没有权限访问该页面', 'danger')
-        return redirect(url_for('main.index'))
-        
     page = request.args.get('page', 1, type=int)
     search = request.args.get('search', '')
     category = request.args.get('category', '')
-    
     data_manager = getattr(current_app, 'data_manager', None)
-    pagination = data_manager.get_questions_paginated(page=page, per_page=10, search=search, category=category) if data_manager else type('Pagination', (), {'items': [], 'pages': 0, 'page': 1})()
+    from web.models import Question
+    # 管理员：所有题目，普通用户：仅个人题目
+    if current_user.is_admin:
+        query = Question.query
+    else:
+        query = Question.query.filter_by(type='personal', owner_id=current_user.id)
+    if category:
+        query = query.filter_by(category=category)
+    if search:
+        query = query.filter(Question.content.ilike(f'%{search}%'))
+    pagination = query.order_by(Question.id.desc()).paginate(page=page, per_page=10, error_out=False)
     categories = data_manager.get_categories() if data_manager else []
-    
     return render_template('manage.html', 
                          questions=pagination.items, 
                          pagination=pagination,
@@ -205,26 +213,18 @@ def add():
     data_manager = getattr(current_app, 'data_manager', None)
     has_perm = UserPermission.query.filter_by(user_id=current_user.id).first() is not None
 
-    if not current_user.is_admin and not has_perm:
-        flash('您没有权限访问该页面', 'danger')
-        return redirect(url_for('main.index'))
-
+    # 所有用户可访问
     if request.method == 'POST':
         contents = request.form.getlist('content[]')
         answers = request.form.getlist('answer[]')
         scores = request.form.getlist('score[]')
         categories = request.form.getlist('category[]')
         images = request.files.getlist('image[]')
-
+        from web.models import Question
         if contents and answers and scores:
             for i, (c, a, s) in enumerate(zip(contents, answers, scores)):
                 if c and a and s:
                     cat = categories[i] if i < len(categories) and categories[i] else '默认题集'
-                    if not current_user.is_admin:
-                        if data_manager and not data_manager.check_permission(current_user.id, cat):
-                            flash(f'您没有权限添加 "{cat}" 类别的题目', 'danger')
-                            continue
-
                     image_filename = ''
                     if i < len(images):
                         file = images[i]
@@ -233,25 +233,40 @@ def add():
                             flash(f'第 {i+1} 题图片上传失败: {error}', 'warning')
                         elif filename:
                             image_filename = filename
-
-                    if data_manager:
-                        data_manager.save_question(c, a, int(s), image_filename, cat)
-
+                    # 管理员添加公共题目，普通用户添加个人题目
+                    if current_user.is_admin:
+                        q = Question(content=c, answer=a, score=int(s), image=image_filename, category=cat, mode='html', type='public')
+                    else:
+                        q = Question(content=c, answer=a, score=int(s), image=image_filename, category=cat, mode='html', type='personal', owner_id=current_user.id)
+                    db.session.add(q)
+            db.session.commit()
             flash('题目添加处理完成！', 'success')
             return redirect(url_for('admin.manage'))
-            
     data_manager = getattr(current_app, 'data_manager', None)
     return render_template('add.html', categories=data_manager.get_categories() if data_manager else [])
 
 @admin_bp.route('/delete/<int:id>', methods=['POST'])
 @login_required
 def delete_question(id):
-    if not current_user.is_admin:
+    from web.models import Question
+    q = Question.query.get_or_404(id)
+    # 仅管理员、题目所有者或有任意题集编辑权限的用户可删除公共题目
+    data_manager = getattr(current_app, 'data_manager', None)
+    has_any_permission = False
+    if data_manager and q.type == 'public':
+        # 只要有任意题集编辑权限即可
+        perms = getattr(current_user, 'permissions', [])
+        if perms and len(perms) > 0:
+            has_any_permission = True
+    if not current_user.is_admin and (
+        (q.type == 'personal' and q.owner_id != current_user.id) or
+        (q.type == 'public' and not has_any_permission)
+    ):
         flash('您没有权限执行此操作', 'danger')
         return redirect(url_for('main.index'))
-
-    data_manager = getattr(current_app, 'data_manager', None)
-    image_filename = data_manager.delete_question(id) if data_manager else None
+    image_filename = q.image
+    db.session.delete(q)
+    db.session.commit()
     if image_filename:
         image_path = os.path.join(current_app.config['UPLOAD_FOLDER'], image_filename)
         if os.path.exists(image_path):
@@ -264,24 +279,43 @@ def delete_question(id):
 @admin_bp.route('/edit/<int:id>', methods=['GET', 'POST'])
 @login_required
 def edit_question(id):
-    if not current_user.is_admin:
+    from web.models import Question
+    q = Question.query.get_or_404(id)
+    # 仅管理员、题目所有者或有任意题集编辑权限的用户可编辑公共题目
+    data_manager = getattr(current_app, 'data_manager', None)
+    has_any_permission = False
+    if data_manager and q.type == 'public':
+        perms = getattr(current_user, 'permissions', [])
+        if perms and len(perms) > 0:
+            has_any_permission = True
+    if not current_user.is_admin and (
+        (q.type == 'personal' and q.owner_id != current_user.id) or
+        (q.type == 'public' and not has_any_permission)
+    ):
         flash('您没有权限执行此操作', 'danger')
         return redirect(url_for('main.index'))
-        
-    data_manager = getattr(current_app, 'data_manager', None)
-    question = data_manager.get_question(id) if data_manager else None
-    if not question:
-        return redirect(url_for('admin.manage'))
-    
     if request.method == 'POST':
         content = request.form.get('content')
         answer = request.form.get('answer')
         score = request.form.get('score')
-        
+        image_filename = q.image
         if content and answer and score:
-            image_filename = question.get('image', '')
-            
-            if request.form.get('delete_image') == 'yes':
+            # 删除图片
+            if request.form.get('delete_image') == 'yes' and image_filename:
+                old_image_path = os.path.join(current_app.config['UPLOAD_FOLDER'], image_filename)
+                if os.path.exists(old_image_path):
+                    try:
+                        os.remove(old_image_path)
+                    except Exception:
+                        pass
+                image_filename = ''
+            # 新图片上传
+            file = request.files.get('image')
+            new_filename, error = validate_and_save_image(file)
+            if error:
+                flash(error, 'danger')
+                return redirect(url_for('admin.edit_question', id=id))
+            if new_filename:
                 if image_filename:
                     old_image_path = os.path.join(current_app.config['UPLOAD_FOLDER'], image_filename)
                     if os.path.exists(old_image_path):
@@ -289,37 +323,17 @@ def edit_question(id):
                             os.remove(old_image_path)
                         except:
                             pass
-                    image_filename = ''
-
-            if 'image' in request.files:
-                file = request.files['image']
-                if file and file.filename != '':
-                    new_filename, error = validate_and_save_image(file)
-                    if error:
-                        flash(error, 'danger')
-                        return redirect(url_for('admin.edit_question', id=id))
-                    
-                    if new_filename:
-                        if image_filename:
-                            old_image_path = os.path.join(current_app.config['UPLOAD_FOLDER'], image_filename)
-                            if os.path.exists(old_image_path):
-                                try:
-                                    os.remove(old_image_path)
-                                except:
-                                    pass
-                        image_filename = new_filename
-
-            data_manager.update_question(
-                id,
-                content=content,
-                answer=answer,
-                score=int(score),
-                image=image_filename,
-                category=request.form.get('category', '默认题集')
-            )
+                image_filename = new_filename
+            q.content = content
+            q.answer = answer
+            q.score = int(score)
+            q.image = image_filename
+            q.category = request.form.get('category', '默认题集')
+            db.session.commit()
             return redirect(url_for('admin.manage'))
-            
-    return render_template('edit.html', question=question, id=id, categories=data_manager.get_categories())
+    # GET 或未通过校验时渲染页面
+    question_html = render_content(q.content, getattr(q, 'mode', 'html')) if q else ''
+    return render_template('edit.html', question=q, question_html=question_html, id=id, categories=[]) # categories 可补全
 
 @admin_bp.route('/admin/queue')
 @login_required

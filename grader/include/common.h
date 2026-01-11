@@ -53,4 +53,18 @@ void get_user_input(char* buffer, int size);
 // grading.c
 int calculate_score(const char* user_ans, const char* correct_ans, int full_score);
 
+// main.c (CLI 入口)
+void start_exam();
+void view_exam_history();
+
+// main.c 辅助函数声明
+void clear_screen();
+void pause_console();
+void print_progress_bar(int current, int total);
+void draw_box_top(int width);
+void draw_box_bottom(int width);
+void draw_box_line(const char* text, int width, const char* color);
+void shuffle_questions(Question *array, int n);
+void save_exam_record(int total_score, int max_score, int duration_sec);
+
 #endif

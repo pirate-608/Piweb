@@ -1,4 +1,4 @@
-
+from web.extensions import db
 from flask_sqlalchemy import SQLAlchemy
 from flask_login import UserMixin
 from werkzeug.security import generate_password_hash, check_password_hash
@@ -6,7 +6,19 @@ from datetime import datetime
 import json
 from sqlalchemy import event
 from sqlalchemy.engine import Engine
-from web.extensions import db
+
+class Post(db.Model):
+    id = db.Column(db.Integer, primary_key=True)
+    topic_id = db.Column(db.Integer, db.ForeignKey('topic.id'), nullable=False)
+    user_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False)
+    content = db.Column(db.Text, nullable=False)
+    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+    parent_id = db.Column(db.Integer, db.ForeignKey('post.id'), nullable=True)
+    topic = db.relationship('Topic', backref=db.backref('posts', lazy=True, cascade="all, delete-orphan"))
+    user = db.relationship('User', backref=db.backref('posts', lazy=True))
+    replies = db.relationship('Post', backref=db.backref('parent', remote_side=[id]), lazy=True)
+    likes = db.relationship('PostLike', backref='post', lazy=True, cascade="all, delete-orphan")
+    mode = db.Column(db.String(20), default='html')
 
 # Enable Write-Ahead Logging (WAL) mode for SQLite
 # This significantly improves concurrency by allowing simultaneous readers and writers
@@ -68,6 +80,10 @@ class Question(db.Model):
     score = db.Column(db.Integer, default=10)
     image = db.Column(db.String(200), nullable=True)
     category = db.Column(db.String(100), default='默认题集', index=True)
+    mode = db.Column(db.String(20), default='html')
+    type = db.Column(db.String(20), default='public', index=True)  # public/personal
+    owner_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=True, index=True)  # 个人题目所属用户
+    owner = db.relationship('User', backref=db.backref('personal_questions', lazy=True))
     def to_dict(self):
         return {
             'id': self.id,
@@ -75,7 +91,10 @@ class Question(db.Model):
             'answer': self.answer,
             'score': self.score,
             'image': self.image,
-            'category': self.category
+            'category': self.category,
+            'mode': self.mode,
+            'type': self.type,
+            'owner_id': self.owner_id
         }
 
 class ExamResult(db.Model):
@@ -124,6 +143,7 @@ class UserPermission(db.Model):
 class SystemSetting(db.Model):
     key = db.Column(db.String(50), primary_key=True)
     value = db.Column(db.Text, nullable=True)
+    mode = db.Column(db.String(20), default='html')  # 公告/指南编辑模式（html/markdown）
 
 class Board(db.Model):
     id = db.Column(db.Integer, primary_key=True)
@@ -149,6 +169,7 @@ class Topic(db.Model):
     board = db.relationship('Board', backref=db.backref('topics', lazy=True, cascade="all, delete-orphan"))
     user = db.relationship('User', backref=db.backref('topics', lazy=True))
     likes = db.relationship('TopicLike', backref='topic', lazy=True, cascade="all, delete-orphan")
+    mode = db.Column(db.String(20), default='html')  # 新增字段，支持渲染模式
     @property
     def images(self):
         return json.loads(self.images_json or '[]')
@@ -156,17 +177,7 @@ class Topic(db.Model):
     def images(self, value):
         self.images_json = json.dumps(value)
 
-class Post(db.Model):
-    id = db.Column(db.Integer, primary_key=True)
-    topic_id = db.Column(db.Integer, db.ForeignKey('topic.id'), nullable=False)
-    user_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False)
-    content = db.Column(db.Text, nullable=False)
-    created_at = db.Column(db.DateTime, default=datetime.utcnow)
-    parent_id = db.Column(db.Integer, db.ForeignKey('post.id'), nullable=True)
-    topic = db.relationship('Topic', backref=db.backref('posts', lazy=True, cascade="all, delete-orphan"))
-    user = db.relationship('User', backref=db.backref('posts', lazy=True))
-    replies = db.relationship('Post', backref=db.backref('parent', remote_side=[id]), lazy=True)
-    likes = db.relationship('PostLike', backref='post', lazy=True, cascade="all, delete-orphan")
+    mode = db.Column(db.String(20), default='html')  # 新增字段，支持渲染模式
 
 class TopicLike(db.Model):
     user_id = db.Column(db.Integer, db.ForeignKey('user.id'), primary_key=True)

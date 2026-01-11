@@ -17,6 +17,13 @@
                     {% endfor %}
                 </select>
             </div>
+                <div class="col-md-2">
+                    <select class="form-select" name="qtype" style="color: black; background-color: white;">
+                        <option value="">全部类型</option>
+                        <option value="public" {% if current_qtype == 'public' %}selected{% endif %}>公共题目</option>
+                        <option value="personal" {% if current_qtype == 'personal' %}selected{% endif %}>个人题目</option>
+                    </select>
+                </div>
             <div class="col-md-2">
                 <button type="submit" class="btn btn-primary w-100">筛选</button>
             </div>
@@ -37,6 +44,7 @@
                 <th scope="col">ID</th>
                 <th scope="col" style="width: 40%;">题目描述</th>
                 <th scope="col">分类</th>
+                    <th scope="col">类型</th>
                 <th scope="col">图片</th>
                 <th scope="col">标准答案</th>
                 <th scope="col">分值</th>
@@ -53,6 +61,13 @@
                     </div>
                 </td>
                 <td><span class="badge bg-info text-dark">{{ q.category }}</span></td>
+                    <td>
+                        {% if q.type == 'personal' %}
+                            <span class="badge bg-warning text-dark">个人</span>
+                        {% else %}
+                            <span class="badge bg-primary">公共</span>
+                        {% endif %}
+                    </td>
                 <td>
                     {% if q.image %}
                     <a href="{{ url_for('main.uploaded_file', filename=q.image) }}" target="_blank" class="badge bg-success text-decoration-none">查看图片</a>
@@ -68,11 +83,19 @@
                 <td>{{ q.score }}</td>
                 <td>
                     <div class="btn-group" role="group">
-                        <a href="{{ url_for('admin.edit_question', id=q.id) }}" class="btn btn-warning btn-sm text-white">编辑</a>
-                        <form action="{{ url_for('admin.delete_question', id=q.id) }}" method="POST" onsubmit="return confirm('确定要删除这道题目吗？');" style="display: inline-block;">
-                            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-                            <button type="submit" class="btn btn-danger btn-sm ms-1">删除</button>
-                        </form>
+                            {% if q.type == 'personal' and q.owner_id == current_user.id %}
+                                <a href="{{ url_for('admin.edit_question', id=q.id) }}" class="btn btn-warning btn-sm text-white">编辑</a>
+                                <form action="{{ url_for('admin.delete_question', id=q.id) }}" method="POST" onsubmit="return confirm('确定要删除这道题目吗？');" style="display: inline-block;">
+                                    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                                    <button type="submit" class="btn btn-danger btn-sm ms-1">删除</button>
+                                </form>
+                            {% elif q.type == 'public' and current_user.is_admin %}
+                                <a href="{{ url_for('admin.edit_question', id=q.id) }}" class="btn btn-warning btn-sm text-white">编辑</a>
+                                <form action="{{ url_for('admin.delete_question', id=q.id) }}" method="POST" onsubmit="return confirm('确定要删除这道题目吗？');" style="display: inline-block;">
+                                    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                                    <button type="submit" class="btn btn-danger btn-sm ms-1">删除</button>
+                                </form>
+                            {% endif %}
                     </div>
                 </td>
             </tr>

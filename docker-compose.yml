@@ -20,14 +20,18 @@ services:
       - ./questions.txt:/app/questions.txt
       # Mount uploads directory for images
       - ./web/static/uploads:/app/web/static/uploads
+      # Mount C build output for grading
+      - ./grader/build:/app/grader/build
     # Enable Gunicorn reload for development
     command: ["sh", "-c", "python web/wait_for_db.py && gunicorn --worker-class eventlet --bind 0.0.0.0:8080 web.app:app"]
 
   worker:
     build: .
     restart: always
-    # Use watchmedo (from watchdog) to auto-restart celery on code changes
-    command: ["watchmedo", "auto-restart", "--directory=web", "--pattern=*.py", "--recursive", "--", "celery", "-A", "web.celery_worker.celery", "worker", "--loglevel=info"]
+    # 开发环境热重载命令（如需自动重启 celery worker，可取消注释并确保已安装 watchdog）
+    # command: ["watchmedo", "auto-restart", "--directory=web", "--pattern=*.py", "--recursive", "--", "celery", "-A", "web.celery_worker.celery", "worker", "--loglevel=info"]
+    # 生产环境推荐标准 celery worker 启动命令
+    command: ["celery", "-A", "web.celery_worker.celery", "worker", "--loglevel=info"]
     environment:
       - DATABASE_URL=postgresql://postgres:postgres@db:5432/grading_system
       - REDIS_HOST=redis

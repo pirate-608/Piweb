@@ -20,6 +20,15 @@
                 </div>
 
                 <div class="mb-3">
+                    <label class="form-label">内容模式</label>
+                    <select name="mode" class="form-select" style="max-width: 200px;">
+                        <option value="markdown" {% if topic and topic.mode == 'markdown' %}selected{% endif %}>Markdown</option>
+                        <option value="html" {% if topic and topic.mode == 'html' %}selected{% endif %}>HTML</option>
+                    </select>
+                    <small class="text-muted">Markdown 支持常用语法，HTML 支持富文本。</small>
+                </div>
+
+                <div class="mb-3">
                     <label class="form-label">内容</label>
                     <!-- 表情包选择器容器 -->
                     <!-- 表情包功能已回滚，移除此容器 -->

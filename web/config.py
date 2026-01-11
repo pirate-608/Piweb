@@ -60,7 +60,7 @@ class Config:
         BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
         
         # Data Paths
-        DLL_PATH = os.path.join(BASE_DIR, 'build', LIB_NAME)
+        DLL_PATH = os.path.join(BASE_DIR, 'grader', 'build', LIB_NAME)
         DATA_FILE = os.path.join(BASE_DIR, 'questions.txt')
         RESULTS_FILE = os.path.join(BASE_DIR, 'results.json')
         

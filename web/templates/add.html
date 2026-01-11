@@ -38,6 +38,14 @@
                         <option value="{{ cat }}">
                         {% endfor %}
                     </datalist>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">题目类型</label>
+                        <select class="form-select" name="type[]">
+                            <option value="public">公共题目</option>
+                            <option value="personal">个人题目</option>
+                        </select>
+                        <div class="form-text">个人题目仅自己可见和管理，公共题目所有人可见。</div>
                 </div>
             </div>
         </div>

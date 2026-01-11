@@ -1,12 +1,14 @@
 # Use an official Python runtime as a parent image
 FROM python:3.11-slim
 
+
 # Install system dependencies
-# gcc, make: For compiling the autograding C core
+# gcc, ninja-build: For compiling the autograding C core with CMake
 # libpq-dev: For PostgreSQL adapter (psycopg2)
 RUN apt-get update && apt-get install -y \
     gcc \
-    make \
+    ninja-build \
+    cmake \
     libpq-dev \
     && rm -rf /var/lib/apt/lists/*
 
@@ -20,9 +22,7 @@ RUN pip install --no-cache-dir -r requirements.txt
 # Copy the entire project
 COPY . .
 
-# Build the C shared library for grading
-# Only build the shared library, skip the executable since it relies on Windows C headers
-RUN make build/libgrading.so
+RUN cmake -S . -B build -G Ninja && cmake --build build --target grader_libgrading_so
 
 # Set environment variables
 ENV PYTHONPATH=/app:/app/web

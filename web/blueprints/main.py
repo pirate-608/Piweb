@@ -1,8 +1,9 @@
 import json
-from flask import Blueprint, render_template, request, redirect, url_for, flash, current_app, send_from_directory
+from flask import Blueprint, render_template, request, redirect, url_for, flash, current_app, send_from_directory, jsonify
 from flask_login import login_required, current_user
 from web.extensions import db, cache_redis
 from web.models import User, SystemSetting, UserCategoryStat, Topic, Post, TopicView
+import datetime
 
 main_bp = Blueprint('main', __name__)
 
@@ -195,3 +196,54 @@ def leaderboard():
     data_manager = getattr(current_app, 'data_manager', None)
     leaderboard = data_manager.get_leaderboard_data() if data_manager else {'global': [], 'categories': {}}
     return render_template('leaderboard.html', leaderboard=leaderboard)
+
+# ================= 工坊相关接口 =====================
+
+# 数据模型（可迁移到 web/models.py）
+class WorkshopDraft(db.Model):
+    __tablename__ = 'workshop_draft'
+    id = db.Column(db.Integer, primary_key=True)
+    user_id = db.Column(db.Integer, db.ForeignKey('user.id'))
+    title = db.Column(db.String(128), nullable=False)
+    description = db.Column(db.Text)
+    content = db.Column(db.Text)
+    type = db.Column(db.String(32))  # online/file
+    created_at = db.Column(db.DateTime, default=datetime.datetime.utcnow)
+    updated_at = db.Column(db.DateTime, default=datetime.datetime.utcnow, onupdate=datetime.datetime.utcnow)
+    user = db.relationship('User', backref='workshop_drafts')
+
+@main_bp.route('/workshop/save_draft', methods=['POST'])
+@login_required
+def save_draft():
+    data = request.json
+    # TODO: 数据校验与存库
+    # title, description, content, type, etc.
+    return jsonify({'success': True, 'msg': '草稿已保存', 'data': data})
+
+@main_bp.route('/workshop/upload_file', methods=['POST'])
+@login_required
+def upload_file():
+    file = request.files.get('file')
+    # TODO: 文件类型校验与格式转换
+    # 返回txt内容
+    return jsonify({'success': True, 'content': '示例txt内容'})
+
+@main_bp.route('/workshop/analyze', methods=['POST'])
+@login_required
+def analyze():
+    text = request.json.get('content', '')
+    # TODO: 调用C分析库，返回统计信息
+    return jsonify({'success': True, 'stats': {'words': 100, 'sections': 3}})
+
+@main_bp.route('/workshop/my_drafts', methods=['GET'])
+@login_required
+def my_drafts():
+    # TODO: 查询当前用户草稿
+    return jsonify({'success': True, 'drafts': []})
+
+@main_bp.route('/workshop/draft/<int:draft_id>', methods=['GET'])
+@login_required
+def get_draft(draft_id):
+    # TODO: 查询草稿详情
+    return jsonify({'success': True, 'draft': {}})
+# ================= 工坊相关接口 END =====================

@@ -430,3 +430,19 @@ class DataManager:
         questions = Question.query.order_by(Question.id).all()
         return [q.to_dict() for q in questions]
 
+    def save_question(self, content, answer, score=10, image=None, category='默认题集'):
+        """
+        保存单个题目到数据库，并导出所有题目到 txt
+        """
+        q = Question(
+            content=content,
+            answer=answer,
+            score=score,
+            image=image,
+            category=category
+        )
+        db.session.add(q)
+        db.session.commit()
+        self.export_questions_to_txt()
+        return q.id
+

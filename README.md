@@ -17,9 +17,10 @@
 
 ```text
 NWW2026/
-├── build/                # C 语言编译产物
-├── include/              # C 头文件
-├── src/                  # C 源文件
+├── grader/
+│   ├── build/            # C 语言编译产物
+│   ├── include/          # C 头文件
+│   └── src/              # C 源文件
 ├── web/                  # Python Web 源代码（主入口）
 │   ├── instance/         # 数据库文件
 │   ├── static/           # 静态资源
@@ -330,19 +331,19 @@ pip install -r web/requirements.txt
 **Windows:**
 
 ```bash
-pyinstaller --name auto_grader_web --onedir --add-data "web/templates;templates" --add-data "web/static;static" --add-binary "build/libgrading.dll;." --clean --noconfirm web/app.py
+pyinstaller --name auto_grader_web --onedir --add-data "web/templates;templates" --add-data "web/static;static" --add-binary "grader/build/libgrading.dll;." --clean --noconfirm web/app.py
 ```
 
 **Linux:**
 
 ```bash
-pyinstaller --name auto_grader_web --onedir --add-data "web/templates:templates" --add-data "web/static:static" --add-binary "build/libgrading.so:." --clean --noconfirm web/app.py
+pyinstaller --name auto_grader_web --onedir --add-data "web/templates:templates" --add-data "web/static:static" --add-binary "grader/build/libgrading.so:." --clean --noconfirm web/app.py
 ```
 
 **macOS:**
 
 ```bash
-pyinstaller --name auto_grader_web --onedir --add-data "web/templates:templates" --add-data "web/static:static" --add-binary "build/libgrading.dylib:." --clean --noconfirm web/app.py
+pyinstaller --name auto_grader_web --onedir --add-data "web/templates:templates" --add-data "web/static:static" --add-binary "grader/build/libgrading.dylib:." --clean --noconfirm web/app.py
 ```
 
 **参数说明**：
@@ -390,5 +391,5 @@ pyinstaller --name auto_grader_web --onedir --add-data "web/templates:templates"
 *   **添加题目**: 可以在 Web 界面添加（支持图片|分类(可选)和多行文本），也可以直接编辑 `questions.txt`。
     *   格式: `题目|答案|分值|图片文件名(可选)`
     *   注意：直接编辑文件时，换行符请使用 `[NEWLINE]` 代替。
-*   **修改核心逻辑**: 修改 `src/grading.c` 后，必须重新运行 `make` 更新动态库。
+*   **修改核心逻辑**: 修改 `grader/src/grading.c` 后，必须重新运行 `make` 更新动态库。
 *   [GitHub仓库地址](https://github.com/pirate-608/NWWeb)

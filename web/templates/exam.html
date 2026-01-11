@@ -15,7 +15,12 @@
     {% for q in questions %}
     <div class="card mb-3">
         <div class="card-header">
-            题目 {{ loop.index }} ({{ q.score }} 分)
+                题目 {{ loop.index }} ({{ q.score }} 分)
+                {% if q.type == 'personal' %}
+                    <span class="badge bg-warning text-dark ms-2">个人题目</span>
+                {% else %}
+                    <span class="badge bg-primary ms-2">公共题目</span>
+                {% endif %}
         </div>
         <div class="card-body">
             <h5 class="card-title" style="white-space: pre-wrap;">{{ q.content }}</h5>
