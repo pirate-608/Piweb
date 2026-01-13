@@ -22,8 +22,18 @@ services:
       - ./web/static/uploads:/app/web/static/uploads
       # Mount C build output for grading
       - ./grader/build:/app/grader/build
+      # 挂载停用词/词典目录，确保C端/服务端都能访问
+      - ./text_analyzer/dict:/app/text_analyzer/dict:ro
+
+  # 可选：CLI测试服务
+  analyzer_cli:
+    build: .
+    working_dir: /app/text_analyzer
+    command: ["./analyzer_cli.exe"]
+    volumes:
+      - ./text_analyzer/dict:/app/text_analyzer/dict:ro
     # Enable Gunicorn reload for development
-    command: ["sh", "-c", "python web/wait_for_db.py && gunicorn --worker-class eventlet  --bind 0.0.0.0:8080 web.app:app"]
+    # command: ["sh", "-c", "python web/wait_for_db.py && gunicorn --worker-class eventlet  --bind 0.0.0.0:8080 web.app:app"]
 
   worker:
     build: .
@@ -46,6 +56,8 @@ services:
       # Mount source code to keep worker in sync
       - ./web:/app/web
       - ./web/celery_worker.py:/app/web/celery_worker.py
+      # 挂载停用词/词典目录，确保C端/服务端都能访问
+      - ./text_analyzer/dict:/app/text_analyzer/dict:ro
 
   redis:
     image: redis:alpine

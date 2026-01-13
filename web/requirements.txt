@@ -24,3 +24,4 @@ pillow
 Flask-Migrate
 watchdog
 markdown2
+flask-socketio[redis]

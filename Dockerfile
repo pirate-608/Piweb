@@ -13,8 +13,14 @@ RUN apt-get update && apt-get install -y \
     libpq-dev \
     && rm -rf /var/lib/apt/lists/*
 
-# Set the working directory in the container
-WORKDIR /app
+
+# 拷贝C端分词产物到/app/text_analyzer
+WORKDIR /app/text_analyzer
+
+# 拷贝CMake构建产物和词典
+COPY build/text_analyzer/analyzer_cli.exe ./
+COPY build/text_analyzer/libanalyzer.dll ./
+COPY build/text_analyzer/dict ./dict
 
 # Copy python dependencies first to leverage Docker cache
 COPY web/requirements.txt requirements.txt
@@ -36,10 +42,10 @@ ENV PYTHONUNBUFFERED=1
 # Expose the port the app runs on
 EXPOSE 8080
 
-# Command to run the application using Gunicorn with Eventlet for SocketIO support
-# Wait for DB first, then start app
-# ====== 开发模式（热重载） ======
-#CMD ["sh", "-c", "python web/wait_for_db.py && FLASK_APP=web/app.py FLASK_ENV=development flask run --host=0.0.0.0 --port=8080"]
 
-# ====== 生产模式（高并发） ======
+# ====== CLI模式（分词/测试） ======
+# 如需运行CLI测试，取消下行注释
+# CMD ["./analyzer_cli.exe"]
+
+# ====== 生产模式（高并发Web） ======
 CMD ["sh", "-c", "python web/wait_for_db.py && gunicorn --worker-class eventlet -w 4 --bind 0.0.0.0:8080 web.app:app"]

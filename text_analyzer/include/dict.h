@@ -18,11 +18,26 @@ typedef struct {
     int total_count;
 } Dict;
 
+
 typedef struct {
     char word[MAX_WORD_LEN];
     int count;
 } WordFreq;
 
+// 词典遍历器声明
+typedef struct {
+    Dict* dict;
+    int bucket_idx;
+    Node* node;
+    const char* key;
+    int value;
+} dict_iter_t;
+
+// 批量加载目录下所有txt词典
+int load_all_cn_dicts(const char* dir_path);
+// 遍历接口声明
+dict_iter_t dict_iter(Dict* d);
+int dict_next(dict_iter_t* it);
 unsigned long hash(const char* str);
 Dict* dict_create(void);
 void dict_free(Dict* d);

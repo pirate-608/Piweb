@@ -131,6 +131,7 @@ def create_app(config_class=Config):
     def on_join(data):
         from flask_socketio import join_room
         room = data.get('room')
+        print(f"[DEBUG] join room: {room}")
         if room:
             join_room(room)
 

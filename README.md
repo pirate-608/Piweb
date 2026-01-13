@@ -93,22 +93,22 @@ python app.py
 #### 2. 构建流程
 ##### 构建（以Windows为例）：
 
-##### 清理旧的构建产物：
-
 ```powershell
- Remove-Item -Recurse -Force build #Windows
-```
-
-- **CMake自带清理（仅限Ninja/Unix Makefiles等部分生成器）**：
-  
-```powershell
-cmake --build build --target clean #但此方法不会删除整个 build 目录，只会清理中间文件。如需完全干净的环境，建议直接删除整个 build 目录再重新构建。
-
-```
-
-```powershell
+ cd D:\NWW2026
+ Remove-Item -Recurse -Force build #清理旧的构建产物
+cmake --build build --target clean #此方法不会删除整个 build 目录，只会清理中间文件。如需完全干净的环境，建议直接删除整个 build 目录再重新构建。
 cmake -S . -B build
 cmake --build build --config Release #构建产物会自动生成到各子模块的build目录下。
+```
+
+#### 执行测试：
+
+```powershell
+cd build/grader
+.\auto_grader_cli.exe
+# 或
+cd build/text_analyzer
+.\analyzer_cli.exe
 ```
 
 ---
@@ -125,7 +125,7 @@ cmake --build build --config Release #构建产物会自动生成到各子模块
 
     docker-compose restart web #仅重新启动 web 服务
 
-    docker-compose restart web worker #重启 celery worker 进程
+    docker-compose restart web worker #重启 web 和 celery worker 进程
 
     docker-compose down  #停止容器进程
 

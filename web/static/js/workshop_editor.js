@@ -4,12 +4,21 @@
 // 依赖：页面需通过<script src="/static/js/socket.io.min.js"></script>引入socket.io客户端
 // 优化：页面加载即建立socket.io连接，保存草稿后join房间，支持断线重连
 
+
 let socket = null;
 let joinedRoom = null;
+function getSocketUrl() {
+  // 生产环境用固定域名，开发用本地
+  if (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1') {
+    return undefined; // 默认即可
+  }
+  // 生产环境
+  return 'wss://67656.fun';
+}
 function ensureSocketConnected() {
   if (!window.io) return null;
   if (socket && socket.connected) return socket;
-  socket = io({ transports: ['websocket'] });
+  socket = io(getSocketUrl(), { transports: ['websocket'] });
   socket.on('disconnect', () => {
     // 自动重连
     setTimeout(() => {
@@ -113,6 +122,7 @@ document.getElementById('save-btn').onclick = function() {
         const s = ensureSocketConnected();
         if (s) {
           joinedRoom = res.task_id;
+          console.log('Joining room', res.task_id);
           s.emit('join', { room: res.task_id });
           // 只注册一次事件
           if (!s._workshopDraftStatusHandler) {
@@ -200,8 +210,34 @@ function updateStats(stats) {
   document.getElementById('stat-cn').textContent = stats.cn_chars || 0
   document.getElementById('stat-en').textContent = stats.en_words || 0
   document.getElementById('stat-rich').textContent = stats.richness || 0
-  document.getElementById('stat-top').textContent = stats.top_words || ''
-  document.getElementById('stat-sensitive').textContent = stats.sensitive_words || ''
+  // 高频词渲染修复
+  let topWordsArr = [];
+  if (typeof stats.top_words === 'string') {
+    try {
+      topWordsArr = JSON.parse(stats.top_words);
+    } catch (e) {
+      topWordsArr = [];
+    }
+  } else if (Array.isArray(stats.top_words)) {
+    topWordsArr = stats.top_words;
+  }
+  document.getElementById('stat-top').textContent = topWordsArr.length
+    ? topWordsArr.map(w => `${w.word}(${w.freq ?? w.count ?? 0})`).join(', ')
+    : '';
+  // 敏感词渲染（同理，支持字符串或数组）
+  let sensitiveArr = [];
+  if (typeof stats.sensitive_words === 'string') {
+    try {
+      sensitiveArr = JSON.parse(stats.sensitive_words);
+    } catch (e) {
+      sensitiveArr = [];
+    }
+  } else if (Array.isArray(stats.sensitive_words)) {
+    sensitiveArr = stats.sensitive_words;
+  }
+  document.getElementById('stat-sensitive').textContent = sensitiveArr.length
+    ? sensitiveArr.map(w => (typeof w === 'string' ? w : w.word || '')).filter(Boolean).join(', ')
+    : '';
   // 章节目录
   const sectionList = document.getElementById('section-list')
   sectionList.innerHTML = ''

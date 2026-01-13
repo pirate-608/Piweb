@@ -2,7 +2,69 @@
 #include <stdlib.h>
 #include <string.h>
 #include <stdio.h>
+#include <dirent.h>
+#include <sys/types.h>
+#include "analyzer_common.h"
 
+// 自动遍历目录并批量加载所有txt词典
+int load_all_cn_dicts(const char* dir_path) {
+    DIR* dir = opendir(dir_path);
+    if (!dir) {
+        printf("[Error] Cannot open dict dir: %s\n", dir_path);
+        return 0;
+    }
+    struct dirent* entry;
+    int total = 0;
+    char path[512];
+    while ((entry = readdir(dir)) != NULL) {
+        // 跳过 . 和 ..
+        if (strcmp(entry->d_name, ".") == 0 || strcmp(entry->d_name, "..") == 0)
+            continue;
+        const char* ext = strrchr(entry->d_name, '.');
+        if (ext && strcmp(ext, ".txt") == 0) {
+            snprintf(path, sizeof(path), "%s/%s", dir_path, entry->d_name);
+            FILE* fp = fopen(path, "r");
+            if (fp) {
+                fclose(fp);
+                total += Analyzer_LoadCNDict(NULL, path);
+                printf("[Info] Loaded dict: %s\n", path);
+            }
+        }
+    }
+    closedir(dir);
+    return total;
+}
+
+// 词典遍历器实现
+dict_iter_t dict_iter(Dict* d) {
+    dict_iter_t it;
+    it.dict = d;
+    it.bucket_idx = -1;
+    it.node = NULL;
+    it.key = NULL;
+    it.value = 0;
+    return it;
+}
+
+int dict_next(dict_iter_t* it) {
+    if (!it || !it->dict) return 0;
+    if (it->node && it->node->next) {
+        it->node = it->node->next;
+        it->key = it->node->word;
+        it->value = it->node->count;
+        return 1;
+    }
+    for (int i = it->bucket_idx + 1; i < HASH_TABLE_SIZE; i++) {
+        if (it->dict->buckets[i]) {
+            it->bucket_idx = i;
+            it->node = it->dict->buckets[i];
+            it->key = it->node->word;
+            it->value = it->node->count;
+            return 1;
+        }
+    }
+    return 0;
+}
 // DJB2 Hash function
 unsigned long hash(const char *str) {
     unsigned long hash = 5381;

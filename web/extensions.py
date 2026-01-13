@@ -11,10 +11,11 @@ db = SQLAlchemy()
 migrate = Migrate()
 login_manager = LoginManager()
 csrf = CSRFProtect()
+SOCKETIO_REDIS_URL = f"redis://{getattr(Config, 'REDIS_HOST', 'redis')}:{getattr(Config, 'REDIS_PORT', 6379)}/0"
 socketio = SocketIO(
-    message_queue=Config.CELERY_BROKER_URL,
     async_mode='eventlet',
-    cors_allowed_origins='*'
+    cors_allowed_origins='*',
+    message_queue=SOCKETIO_REDIS_URL
 )
 
 # Redis Access
