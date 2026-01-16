@@ -4,7 +4,15 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>NWW - Night's Watch Window</title>
-    <link href="{{ url_for('static', filename='css/bootstrap.min.css') }}" rel="stylesheet">
+    <link rel="icon" type="image/x-icon" href="/static/favicon/favicon.ico?v={{ static_version }}">
+    <!-- 多尺寸 favicon 及 PWA 支持 -->
+    <link rel="apple-touch-icon" sizes="180x180" href="/static/favicon/apple-touch-icon.png?v={{ static_version }}">
+    <link rel="icon" type="image/png" sizes="32x32" href="/static/favicon/favicon-32x32.png?v={{ static_version }}">
+    <link rel="icon" type="image/png" sizes="16x16" href="/static/favicon/favicon-16x16.png?v={{ static_version }}">
+    <link rel="manifest" href="/static/favicon/site.webmanifest?v={{ static_version }}">
+    <link href="{{ url_for('static', filename='css/bootstrap.min.css') }}?v={{ static_version }}" rel="stylesheet">
+    <!-- Dropzone CSS -->
+    {% if dropzone %}{{ dropzone.load_css() }}{% endif %}
     <style>
         /* Dark Theme Variables */
         :root {
@@ -104,17 +112,17 @@
                                     <a class="nav-link" href="{{ url_for('forum.index') }}">💬 论坛</a>
                                 </li>
                                 <li class="nav-item">
-                                    <a class="nav-link" href="{{ url_for('admin.add') }}">添加题目</a>
+                                    <a class="nav-link" href="{{ url_for('admin_bp.add') }}">添加题目</a>
                                 </li>
                                 <li class="nav-item">
-                                    <a class="nav-link" href="{{ url_for('admin.manage') }}">管理题目</a>
+                                    <a class="nav-link" href="{{ url_for('admin_bp.manage') }}">管理题目</a>
                                 </li>
                                 <li class="nav-item">
                                     <a class="nav-link" href="{{ url_for('main.workshop_editor') }}">🛠️ 工坊</a>
                                 </li>
                                 {% if current_user.is_admin %}
                                 <li class="nav-item">
-                                    <a class="nav-link" href="{{ url_for('admin.users') }}">用户管理</a>
+                                    <a class="nav-link" href="{{ url_for('admin_bp.users') }}">用户管理</a>
                                 </li>
                                 {% endif %}
                             {% endif %}
@@ -169,5 +177,7 @@
         </footer>
     </div>
     <script src="{{ url_for('static', filename='js/bootstrap.bundle.min.js') }}"></script>
+    <!-- Dropzone JS -->
+    {% if dropzone %}{{ dropzone.load_js() }}{% endif %}
 </body>
 </html>

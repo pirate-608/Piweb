@@ -116,7 +116,6 @@ cd build/text_analyzer
 ### Web 部署
 
 #### Docker 一键部署（推荐）
-
 1.  **启动服务**：
     在项目根目录下打开终端，运行：
     ```powershell

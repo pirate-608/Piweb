@@ -9,6 +9,5 @@ RUN curl -L --output /usr/local/bin/cloudflared https://gh-proxy.com/https://git
 
 WORKDIR /etc/cloudflared
 
-# 启动命令: 读取token文件并启动隧道 (强制 http2)
-# 注意: 这里使用 sh -c 是为了能执行 cat 命令读取文件内容
-CMD ["sh", "-c", "if [ -f /app/tunnel_token.txt ]; then token=$(cat /app/tunnel_token.txt | tr -d '[:space:]'); echo 'Starting tunnel with token...'; cloudflared tunnel run --protocol http2 --token $token; else echo 'Error: tunnel_token.txt not found'; exit 1; fi"]
+# 启动命令: 使用 config.yml 和 credentials 文件启动隧道，并输出日志
+CMD ["cloudflared", "tunnel", "--config", "/etc/cloudflared/config.yml", "run"]

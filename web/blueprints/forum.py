@@ -159,9 +159,10 @@ def validate_and_save_forum_image(file):
         return None, f"不支持的文件类型"
         
     unique_filename = str(uuid.uuid4()) + ext
-    # Use the same uploads folder as the main app
-    path = os.path.join(current_app.static_folder, 'uploads', unique_filename)
-    os.makedirs(os.path.dirname(path), exist_ok=True)
+    # 分类存储到 uploads/images
+    images_dir = os.path.join(current_app.static_folder, 'uploads', 'images')
+    os.makedirs(images_dir, exist_ok=True)
+    path = os.path.join(images_dir, unique_filename)
     file.save(path)
     return unique_filename, None
 

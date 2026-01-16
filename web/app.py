@@ -1,12 +1,19 @@
+# Flask工厂模式下静态资源版本号自动注入
+import datetime
 from __init__ import create_app, socketio
-import sys
+
+def get_static_version():
+	# 可改为 git hash 或其他自动化方式
+	return datetime.datetime.now().strftime('%Y%m%d%H%M')
+
+def inject_static_version():
+	return {'static_version': get_static_version()}
 
 # Create the application instance
 app = create_app()
 
-if __name__ == '__main__':
-    # Disable debug mode in production/packaged environment
-    debug_mode = not getattr(sys, 'frozen', False)
-    # Use socketio.run for WebSocket capability
-    # 显式传入Redis消息队列参数，确保一致性
-    socketio.run(app, debug=debug_mode, port=5000, message_queue='redis://redis:6379/0', async_mode='eventlet')
+# 注册 context_processor，确保 app 已实例化
+app.context_processor(inject_static_version)
+
+# 生产环境下不在此处启动 socketio.run，由 gunicorn + eventlet 启动
+# 本地开发可用 flask run 或 python app.py

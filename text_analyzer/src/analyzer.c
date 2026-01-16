@@ -16,6 +16,23 @@
 static TrieNode* g_cn_dict = NULL;
 static int g_cn_dict_loaded = 0;
 static pthread_mutex_t g_cn_dict_mutex = PTHREAD_MUTEX_INITIALIZER;
+// 全局只加载一次敏感词/停用词
+static pthread_once_t g_words_once = PTHREAD_ONCE_INIT;
+static void ensure_sensitive_and_stop_words_loaded_once() {
+    load_all_sensitive_and_stop_words();
+}
+
+static void load_main_dicts_once() {
+    int dict_cnt = Analyzer_LoadCNDict(NULL, "./dict/Chinese/dict.txt");
+    int it_cnt = Analyzer_LoadCNDict(NULL, "./dict/Chinese/IT.txt");
+    int idiom_cnt = Analyzer_LoadCNDict(NULL, "./dict/Chinese/idiom.txt");
+    int sensitive_cnt = Analyzer_LoadCNDict(NULL, "./dict/Chinese/sensitive_words_cn.txt");
+    int stop_cnt = Analyzer_LoadCNDict(NULL, "./dict/Chinese/stop_words_cn.txt");
+    if (dict_cnt == 0 || it_cnt == 0 || idiom_cnt == 0) {
+        fprintf(stderr, "[FATAL] Dictionary load failed: dict.txt=%d, IT.txt=%d, idiom.txt=%d\n", dict_cnt, it_cnt, idiom_cnt);
+        exit(1);
+    }
+}
 
 // 支持多文件合并加载分词词典
 static int load_dict_file_to_trie(TrieNode* trie, const char* dict_path) {
@@ -109,9 +126,15 @@ static void json_escape(const char* src, char* dst, size_t dst_size) {
 }
 
 EXPORT int analyze_text(const char* content, char* result_json, int buf_size) {
+    // ...existing code...
+    pthread_once(&g_words_once, ensure_sensitive_and_stop_words_loaded_once);
+    // 自动加载分词主词典（只加载一次），必须在AnalyzerContext创建前
+    static pthread_once_t g_dict_once = PTHREAD_ONCE_INIT;
+    pthread_once(&g_dict_once, load_main_dicts_once);
     if (!content || !result_json || buf_size < 256) return -1;
     AnalyzerContext* ctx = Analyzer_Create();
     if (!ctx) return -1;
+    // ...existing code...
     
     Analyzer_Process(ctx, content);
     Stats stats = Analyzer_GetStats(ctx);
@@ -230,6 +253,10 @@ EXPORT void Analyzer_Process(AnalyzerContext* ctx, const char* text) {
     while (*p) {
         int len = utf8_len(*p);
 
+        if (buf_idx == 0 && ctx->cn_dict && len > 1) {
+            // ...existing code...
+        }
+
         // --- 1. Markdown Header Check ---
         if (is_line_start && *p == '#') {
             int level = 0;
@@ -265,6 +292,7 @@ EXPORT void Analyzer_Process(AnalyzerContext* ctx, const char* text) {
             int matched_len = 0;
             int matched_freq = 0;
             if (trie_search_longest(ctx->cn_dict, (const char*)p, &matched_len, &matched_freq)) {
+                // ...existing code...
                 // 提取
                 char matched_word[MAX_WORD_LEN];
                 int copy_len = (matched_len < MAX_WORD_LEN) ? matched_len : (MAX_WORD_LEN - 1);
@@ -280,11 +308,14 @@ EXPORT void Analyzer_Process(AnalyzerContext* ctx, const char* text) {
                 }
 
                 if (dict_get(ctx->set_sensitive, matched_word)) {
+                    // ...existing code...
                     ctx->stats.sensitive_count++;
                     dict_add(ctx->dict_sensitive_hit, matched_word);
                 } else if (dict_get(ctx->set_redundant, matched_word)) {
+                    // ...existing code...
                     ctx->stats.redundancy_count++;
                 } else if (!dict_get(ctx->set_stop, matched_word)) {
+                    // ...existing code...
                     dict_add(ctx->dict_freq, matched_word);
                 }
 
@@ -298,16 +329,20 @@ EXPORT void Analyzer_Process(AnalyzerContext* ctx, const char* text) {
         if (len == 1) {
             // ASCII
             if (isalpha(*p)) {
+                // ...existing code...
                 if (buf_idx < MAX_WORD_LEN - 1) buffer[buf_idx++] = tolower(*p);
             } else {
                 // Not alpha (number, punct, space) -> Flush Buffer
                 if (buf_idx > 0) {
+                    // ...existing code...
                      buffer[buf_idx] = '\0';
                      ctx->stats.en_words++;
                      if (dict_get(ctx->set_sensitive, buffer)) {
+                         // ...existing code...
                          ctx->stats.sensitive_count++;
                          dict_add(ctx->dict_sensitive_hit, buffer);
                      } else if (!dict_get(ctx->set_stop, buffer)) {
+                         // ...existing code...
                          dict_add(ctx->dict_freq, buffer);
                      }
                      buf_idx = 0;
@@ -319,6 +354,7 @@ EXPORT void Analyzer_Process(AnalyzerContext* ctx, const char* text) {
         } else {
             // Multibyte fallback
             if (buf_idx > 0) { // Flush pending EN word
+                // ...existing code...
                  buffer[buf_idx] = '\0';
                  ctx->stats.en_words++;
                  if (!dict_get(ctx->set_stop, buffer)) dict_add(ctx->dict_freq, buffer);
@@ -329,11 +365,14 @@ EXPORT void Analyzer_Process(AnalyzerContext* ctx, const char* text) {
             for(int i=0; i<len; i++) mb_char[i] = p[i];
             
             if (is_chinese(p)) {
+                // ...existing code...
                 ctx->stats.cn_chars++;
                 if (dict_get(ctx->set_sensitive, mb_char)) {
+                    // ...existing code...
                     ctx->stats.sensitive_count++;
                     dict_add(ctx->dict_sensitive_hit, mb_char);
                 } else if (!dict_get(ctx->set_stop, mb_char)) {
+                    // ...existing code...
                     dict_add(ctx->dict_freq, mb_char);
                 }
             } else {

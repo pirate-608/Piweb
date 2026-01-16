@@ -14,22 +14,21 @@ RUN apt-get update && apt-get install -y \
     && rm -rf /var/lib/apt/lists/*
 
 
-# 拷贝C端分词产物到/app/text_analyzer
-WORKDIR /app/text_analyzer
 
-# 拷贝CMake构建产物和词典
-COPY build/text_analyzer/analyzer_cli.exe ./
-COPY build/text_analyzer/libanalyzer.dll ./
-COPY build/text_analyzer/dict ./dict
+# 全局COPY grader、text_analyzer、根CMakeLists.txt
+WORKDIR /app
+COPY grader ./grader
+COPY text_analyzer ./text_analyzer
+COPY CMakeLists.txt ./
+COPY text_analyzer/dict ./text_analyzer/dict
 
-# Copy python dependencies first to leverage Docker cache
+
+# 安装Python依赖
 COPY web/requirements.txt requirements.txt
 RUN pip install --no-cache-dir -r requirements.txt
 
-# Copy the entire project
-COPY . .
-
-RUN cmake -S . -B build -G Ninja \
+RUN rm -rf build && \
+    cmake -S . -B build -G Ninja \
     -DCMAKE_BUILD_TYPE=Release \
     -DCMAKE_C_COMPILER=gcc \
     -DCMAKE_CXX_COMPILER=g++ \
@@ -41,11 +40,6 @@ ENV PYTHONUNBUFFERED=1
 
 # Expose the port the app runs on
 EXPOSE 8080
-
-
-# ====== CLI模式（分词/测试） ======
-# 如需运行CLI测试，取消下行注释
-# CMD ["./analyzer_cli.exe"]
 
 # ====== 生产模式（高并发Web） ======
 CMD ["sh", "-c", "python web/wait_for_db.py && gunicorn --worker-class eventlet -w 4 --bind 0.0.0.0:8080 web.app:app"]

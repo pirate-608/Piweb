@@ -2,7 +2,7 @@
 
 {% block content %}
 <h2 class="mb-4">编辑题目</h2>
-<form method="POST" action="{{ url_for('admin.edit_question', id=id) }}" enctype="multipart/form-data">
+<form method="POST" action="{{ url_for('admin_bp.edit_question', id=id) }}" enctype="multipart/form-data">
     <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
     <div class="mb-3">
         <label for="content" class="form-label">题目描述</label>
@@ -13,7 +13,7 @@
         <label for="image" class="form-label">题目图片 (可选)</label>
         {% if question.image %}
         <div class="mb-2">
-            <img src="{{ url_for('main.uploaded_file', filename=question.image) }}" alt="Current Image" style="max-height: 200px; max-width: 100%;">
+            <img src="{{ url_for('main.uploaded_file', filename=question.image) }}?v={{ static_version }}" alt="Current Image" style="max-height: 200px; max-width: 100%;">
             <div class="form-check mt-2">
                 <input class="form-check-input" type="checkbox" value="yes" id="delete_image" name="delete_image">
                 <label class="form-check-label text-danger" for="delete_image">
@@ -24,6 +24,14 @@
         {% endif %}
         <input type="file" class="form-control" id="image" name="image" accept="image/*, .jpg, .jpeg, .png, .gif, .webp, .svg, .bmp, .tiff">
         <div class="form-text">上传新图片将替换旧图片。支持 JPG, PNG, GIF, WEBP, SVG, BMP, TIFF 等格式。</div>
+        <!-- Dropzone 拖拽上传区（可选） -->
+        <div class="mt-2">
+            <label class="form-label">拖拽上传图片（可选）</label>
+            {% if dropzone %}
+            {{ dropzone.create(action=url_for('admin_bp.edit_question', id=id), input_name='image', multiple=False) }}
+            {% endif %}
+            <div class="form-text">可拖拽上传图片，支持与上方选择框共用。</div>
+        </div>
     </div>
     <div class="mb-3">
         <label for="answer" class="form-label">标准答案</label>

@@ -33,7 +33,7 @@ if(UNIX)
 endif()
 
 # 生成 CLI 可执行文件
-add_executable(analyzer_cli src/main.c) 
+add_executable(analyzer_cli src/main.c src/list.c)
 target_link_libraries(analyzer_cli analyzer)
 set_target_properties(analyzer_cli PROPERTIES
     RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/text_analyzer

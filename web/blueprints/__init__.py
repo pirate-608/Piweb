@@ -3,7 +3,6 @@ from .main import main_bp
 from .auth import auth_bp
 from .forum import forum_bp
 from .exam import exam_bp
-from .admin import admin_bp
 
 # 可选：统一导出，方便IDE补全
 __all__ = [
@@ -11,6 +10,5 @@ __all__ = [
 	'auth_bp',
 	'forum_bp',
 	'exam_bp',
-	'admin_bp',
 ]
 # 使 blueprints 成为 Python 包

@@ -64,9 +64,16 @@ int main(int argc, char** argv) {
     int w_count = load_all_sensitive_and_stop_words();
     printf("- Loaded %d sensitive/stop words.\n", w_count);
 
-    // 加载分词词典 (请确保路径正确)
-    Analyzer_LoadCNDict(NULL, "./dict/Chinese/dict.txt");
-    Analyzer_LoadCNDict(NULL, "./dict/Chinese/IT.txt");  
+    printf("Loaded Sensitive Words (CN):\n");
+    for (int i = 0; i < SENSITIVE_WORDS_CN_COUNT; ++i) {
+        if (SENSITIVE_WORDS_CN[i]) printf("  [%d] %s\n", i, SENSITIVE_WORDS_CN[i]);
+    }
+    printf("Loaded Sensitive Words (EN):\n");
+    for (int i = 0; i < SENSITIVE_WORDS_EN_COUNT; ++i) {
+        if (SENSITIVE_WORDS_EN[i]) printf("  [%d] %s\n", i, SENSITIVE_WORDS_EN[i]);
+    }
+
+    // 分词词典由analyze_text自动全局加载，无需手动加载
 
     char path[512];
     if (argc > 1) {

@@ -248,13 +248,48 @@ def save_draft_status():
         return jsonify({'success': False, 'status': 'error', 'msg': str(result.result)})
     else:
         return jsonify({'success': False, 'status': result.state})
+from web.extensions import csrf
 @main_bp.route('/workshop/upload_file', methods=['POST'])
+@csrf.exempt  # 临时排查CSRF拦截
 @login_required
 def upload_file():
+    import sys
+    print(f"[DEBUG] upload_file called: user={{getattr(current_user, 'id', None)}}, files={{request.files}}", file=sys.stderr)
+    sys.stderr.flush()
+    from werkzeug.utils import secure_filename
+    import os
     file = request.files.get('file')
-    # TODO: 文件类型校验与格式转换
-    # 返回txt内容
-    return jsonify({'success': True, 'content': '示例txt内容'})
+    if not file:
+        return jsonify({'success': False, 'msg': '未选择文件'}), 400
+    # 允许的扩展名
+    allowed_ext = {'txt', 'md', 'pdf', 'docx'}
+    filename = secure_filename(file.filename)
+    ext = filename.rsplit('.', 1)[-1].lower() if '.' in filename else ''
+    if ext not in allowed_ext:
+        return jsonify({'success': False, 'msg': '文件类型不支持'}), 400
+    # 分类存储到 uploads/files
+    base_upload_dir = os.path.join(os.path.dirname(__file__), '../static/uploads')
+    files_dir = os.path.join(base_upload_dir, 'files')
+    os.makedirs(files_dir, exist_ok=True)
+    save_path = os.path.join(files_dir, filename)
+    file.save(save_path)
+    # 支持 txt/md/pdf/docx 纯文本提取
+    content = ''
+    try:
+        if ext in {'txt', 'md'}:
+            with open(save_path, encoding='utf-8', errors='ignore') as f:
+                content = f.read()
+        elif ext == 'pdf':
+            from PyPDF2 import PdfReader
+            reader = PdfReader(save_path)
+            content = '\n'.join(page.extract_text() or '' for page in reader.pages)
+        elif ext == 'docx':
+            from docx import Document
+            doc = Document(save_path)
+            content = '\n'.join([para.text for para in doc.paragraphs])
+    except Exception as e:
+        return jsonify({'success': False, 'msg': f'内容提取失败: {str(e)}'}), 500
+    return jsonify({'success': True, 'filename': filename, 'url': f'/static/uploads/{filename}', 'content': content})
 
 
 @main_bp.route('/workshop/analyze', methods=['POST'])
@@ -264,17 +299,8 @@ def analyze():
     text = request.json.get('content', '')
     # 调用C分析库
     from web.services.analyzer import AnalyzerService
-    import platform
-    import os
-    # 动态库路径
-    system_name = platform.system()
-    if system_name == 'Windows':
-        lib_name = 'libanalyzer.dll'
-    else:
-        lib_name = 'libanalyzer.so'
-    # Docker容器内工作目录通常为/app，build目录在/app/build/text_analyzer
-    base_dir = os.path.abspath(os.path.join(os.path.dirname(__file__), '..', '..'))
-    dll_path = os.path.join(base_dir, 'build', 'text_analyzer', lib_name)
+    from web.config import Config
+    dll_path = Config.LIBANALYZER_PATH
     try:
         analyzer = AnalyzerService(dll_path)
         stats = analyzer.analyze(text)

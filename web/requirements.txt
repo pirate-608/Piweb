@@ -3,12 +3,7 @@ Flask-SQLAlchemy
 Flask-Login
 Flask-WTF>=1.1
 waitress
-psycopg2
-Flask
-Flask-SQLAlchemy
 psycopg2-binary
-Flask-Login
-Flask-WTF
 redis
 celery
 gunicorn
@@ -19,9 +14,14 @@ werkzeug
 python-dotenv
 Flask-Session>=0.5
 Flask-Cors
-Flask-SocketIO
+flask-socketio[redis]
 pillow
 Flask-Migrate
-watchdog
+#watchdog
 markdown2
-flask-socketio[redis]
+Flask-admin
+## Flask-Uploads 已移除，统一用Flask原生secure_filename和自定义保存
+Flask-Dropzone
+Flask-Mail
+PyPDF2
+python-docx

@@ -10,32 +10,40 @@
       <form id="workshop-form" method="post" enctype="multipart/form-data">
         <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
         <div class="mb-3">
-          <label class="form-label">标题</label>
+          <label class="form-label" for="title">标题</label>
           <input type="text" class="form-control" name="title" id="title" placeholder="请输入作品标题" required>
           <div class="invalid-feedback">请填写此字段</div>
         </div>
         <div class="mb-3">
-          <label class="form-label">作品说明</label>
+          <label class="form-label" for="description">作品说明</label>
           <textarea class="form-control" name="description" id="description" rows="3" placeholder="支持Markdown"></textarea>
         </div>
         <div class="mb-3">
           <label class="form-label">创作方式</label>
           <div>
-            <input type="radio" name="mode" value="online" checked> 在线创作
-            <input type="radio" name="mode" value="upload" class="ms-3"> 上传文件
+            <input type="radio" name="mode" id="mode_online" value="online" checked> <label for="mode_online" class="me-2">在线创作</label>
+            <input type="radio" name="mode" id="mode_upload" value="upload" class="ms-3"> <label for="mode_upload">上传文件</label>
           </div>
         </div>
         <div class="mb-3" id="online-editor">
-          <label class="form-label">正文内容（支持#分章节）</label>
+          <label class="form-label" for="content">正文内容（支持#分章节）</label>
           <textarea class="form-control" name="content" id="content" rows="10" placeholder="正文内容"></textarea>
           <div class="invalid-feedback">请填写此字段</div>
           <div class="form-text text-info">章节格式：<b># 标题</b>（#后需有空格，否则不识别为章节）</div>
         </div>
         <div class="mb-3 d-none" id="upload-area">
-          <label class="form-label">上传文件</label>
+          <label class="form-label" for="file">上传文件</label>
           <input type="file" class="form-control" name="file" id="file">
           <div class="invalid-feedback">请填写此字段</div>
           <div class="form-text">支持 txt, md, pdf, docx 文件</div>
+          <!-- Dropzone 拖拽上传区（可选） -->
+          <div class="mt-2">
+            <div class="form-label">拖拽上传文件（可选）</div>
+            {% if dropzone %}
+            <div id="dropzone-area">{{ dropzone.create(action=url_for('main.upload_file'), input_name='file', multiple=False) }}</div>
+            {% endif %}
+            <div class="form-text">可拖拽上传，支持与上方选择框共用。</div>
+          </div>
         </div>
         <button type="button" class="btn btn-primary" id="save-btn">保存草稿</button>
       </form>
@@ -53,8 +61,8 @@
     </div>
   </div>
 </div>
-<script src="/static/js/socket.io.min.js"></script>
-<script src="/static/js/workshop_editor.js"></script>
+<script src="/static/js/socket.io.min.js?v={{ static_version }}"></script>
+<script src="/static/js/workshop_editor.js?v={{ static_version }}"></script>
 <script>
 // 简单切换编辑/上传区
 const modeRadios = document.getElementsByName('mode');

@@ -14,13 +14,15 @@ def load_user(user_id):
     return User.query.get(int(user_id))
 
 # Import blueprints
-from blueprints.auth import auth_bp
-from blueprints.main import main_bp
-from blueprints.exam import exam_bp
-from blueprints.admin import admin_bp
-from blueprints.forum import forum_bp
+
 
 def create_app(config_class=Config):
+    # 延迟导入所有 blueprint，避免循环依赖和多次实例化
+    from web.blueprints.auth import auth_bp
+    from web.blueprints.main import main_bp
+    from web.blueprints.exam import exam_bp
+    from web.blueprints.admin import admin_bp
+    from web.blueprints.forum import forum_bp
     # 延迟导入，彻底消除循环依赖
     from web.utils.data_manager import DataManager
     from services.grading import GradingService
@@ -52,7 +54,14 @@ def create_app(config_class=Config):
         app,
         message_queue=app.config.get('CELERY_BROKER_URL'),
         async_mode='eventlet',
-        cors_allowed_origins='*'
+        cors_allowed_origins='*',
+        ping_timeout=30,
+        ping_interval=10,
+        logger=True,
+        engineio_logger=True,
+        max_http_buffer_size=10 * 1024 * 1024,  # 10MB
+        allow_upgrades=True,
+        cors_allowed_headers='*'
     )
     csrf.init_app(app)
     login_manager.init_app(app)
@@ -83,6 +92,14 @@ def create_app(config_class=Config):
     # Initialize Celery
     app.extensions['celery'] = celery_utils.make_celery(app)
 
+    # --- Flask-Admin 集成 ---
+    from web.admin_view import init_admin
+    init_admin(app)
+
+    # --- Flask-Uploads & Flask-Dropzone 集成 ---
+    from web.uploads_config import init_uploads
+    app.dropzone = init_uploads(app)
+
     # Register Blueprints
     app.register_blueprint(auth_bp)
     app.register_blueprint(main_bp)
@@ -94,14 +111,27 @@ def create_app(config_class=Config):
     # Register Global Hooks
     @app.after_request
     def add_header(response):
+        # 安全响应头
         response.headers['X-Content-Type-Options'] = 'nosniff'
-        response.headers['X-Frame-Options'] = 'SAMEORIGIN'
-        response.headers['X-XSS-Protection'] = '1; mode=block'
+        # 用 CSP frame-ancestors 替代 X-Frame-Options
+        response.headers['Content-Security-Policy'] = "frame-ancestors 'self'"
+        # response.headers['X-Frame-Options'] = 'SAMEORIGIN'  # 已弃用
+        # response.headers['X-XSS-Protection'] = '1; mode=block'  # 已弃用
         response.headers['ngrok-skip-browser-warning'] = 'true'
-        if 'exam' in request.path:
+        # 全局 Cache-Control
+        if request.path.startswith('/static/') or request.path.startswith('/uploads/'):
+            # 静态资源长缓存
+            response.headers['Cache-Control'] = 'public, max-age=31536000, immutable'
+        else:
             response.headers['Cache-Control'] = 'no-store, no-cache, must-revalidate, max-age=0'
-            response.headers['Pragma'] = 'no-cache'
-            response.headers['Expires'] = '0'
+        # 移除 Pragma/Expires，统一用 Cache-Control
+        response.headers.pop('Pragma', None)
+        response.headers.pop('Expires', None)
+        # Content-Type charset=utf-8 检查
+        ct = response.headers.get('Content-Type')
+        if ct and 'charset' not in ct.lower():
+            if ct.startswith('text/') or ct.startswith('application/json'):
+                response.headers['Content-Type'] = ct + '; charset=utf-8'
         return response
 
     @app.before_request

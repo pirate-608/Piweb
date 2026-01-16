@@ -2,7 +2,7 @@
 
 {% block content %}
 <h2 class="mb-4">批量添加题目</h2>
-<form method="POST" action="{{ url_for('admin.add') }}" id="addForm" enctype="multipart/form-data">
+<form method="POST" action="{{ url_for('admin_bp.add') }}" id="addForm" enctype="multipart/form-data">
     <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
     <div id="questions-container">
         <div class="card mb-3 question-item">
@@ -20,6 +20,14 @@
                     <label class="form-label">题目图片 (可选)</label>
                     <input type="file" class="form-control" name="image[]" accept=".jpg,.jpeg,.png,.gif,.webp,.svg,.bmp,.tiff">
                     <div class="form-text">支持 JPG, PNG, GIF, WebP, SVG, BMP, TIFF 格式。</div>
+                    <!-- Dropzone 拖拽上传区（可选） -->
+                    <div class="mt-2">
+                        <label class="form-label">拖拽上传图片（可选）</label>
+                        {% if dropzone %}
+                        {{ dropzone.create(action=url_for('admin_bp.add'), input_name='image[]', multiple=True) }}
+                        {% endif %}
+                        <div class="form-text">可拖拽多张图片，支持与上方选择框共用。</div>
+                    </div>
                 </div>
                 <div class="mb-3">
                     <label class="form-label">标准答案</label>

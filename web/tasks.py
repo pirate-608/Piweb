@@ -10,8 +10,9 @@ from celery import shared_task
 def save_draft_task(self, user_id, title, content, description, draft_type):
     task_id = self.request.id
     # 推送开始
+    room_name = task_id
     try:
-        socketio.emit('draft_status', {'status': 'processing', 'percent': 10, 'task_id': task_id}, room=task_id)
+        socketio.emit('draft_status', {'status': 'processing', 'percent': 10, 'task_id': task_id}, room=room_name)  # 房间推送
     except Exception as e:
         print(f"[Celery] SocketIO emit failed: {e}")
     # 保存/更新草稿
@@ -39,37 +40,31 @@ def save_draft_task(self, user_id, title, content, description, draft_type):
         stats = None
         try:
             from web.services.analyzer import AnalyzerService
-            import platform, os
-            system_name = platform.system()
-            if system_name == 'Windows':
-                lib_name = 'libanalyzer.dll'
-            else:
-                lib_name = 'libanalyzer.so'
-            base_dir = os.path.abspath(os.path.join(os.path.dirname(__file__), '..', 'build', 'text_analyzer'))
-            dll_path = os.path.join(base_dir, lib_name)
-            analyzer = AnalyzerService(dll_path)
+            from web.config import Config
+            analyzer = AnalyzerService(Config.LIBANALYZER_PATH)
             stats = analyzer.analyze(content)
         except Exception as e:
             print(f"[Celery] AnalyzerService failed: {e}")
             stats = None
 
-        # 推送完成，带上最新统计
+        # 推送完成，带上最新统计（无论成功与否 stats 字段都存在）
         try:
+            msg = '草稿已保存' if stats and stats.get('ok') else (stats.get('msg') if stats and stats.get('msg') else '分析失败')
             socketio.emit('draft_status', {
                 'status': 'done',
                 'percent': 100,
                 'task_id': task_id,
                 'id': draft.id,
-                'msg': '草稿已保存',
-                'stats': stats if stats and stats.get('ok') else None
-            }, room=task_id)
+                'msg': msg,
+                'stats': stats or {'ok': False, 'msg': 'Analyzer未返回结果'}
+            }, room=room_name)  # 房间推送
         except Exception as e:
             print(f"[Celery] SocketIO emit failed: {e}")
-        return {'success': True, 'id': draft.id, 'msg': '草稿已保存', 'stats': stats if stats and stats.get('ok') else None}
+        return {'success': True, 'id': draft.id, 'msg': msg, 'stats': stats or {'ok': False, 'msg': 'Analyzer未返回结果'}}
     except Exception as e:
         db.session.rollback()
         try:
-            socketio.emit('draft_status', {'status': 'error', 'percent': 100, 'task_id': task_id, 'msg': str(e)}, room=task_id)
+            socketio.emit('draft_status', {'status': 'error', 'percent': 100, 'task_id': task_id, 'msg': str(e)}, room=room_name)  # 房间推送
         except Exception as e2:
             print(f"[Celery] SocketIO emit failed: {e2}")
         return {'success': False, 'msg': str(e)}
@@ -86,7 +81,11 @@ def get_socket_emitter():
     from flask_socketio import SocketIO
     Config = get_config()
     try:
-        return SocketIO(message_queue=Config.CELERY_BROKER_URL)
+        return SocketIO(
+            async_mode='eventlet',
+            cors_allowed_origins='*',
+            message_queue=f"redis://{Config.REDIS_HOST}:{Config.REDIS_PORT}/0"
+        )
     except Exception as e:
         print(f"[Celery] Warning: SocketIO emitter init failed: {e}")
         return None

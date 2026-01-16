@@ -1,8 +1,11 @@
 
-from flask import Blueprint, render_template, request, redirect, url_for, flash, session, current_app
+import random
+import time
+from flask import Blueprint, render_template, request, redirect, url_for, flash, session, current_app, jsonify
 from flask_login import login_user, logout_user, login_required, current_user
-from web.extensions import db
+from web.extensions import db, mail
 from web.models import User
+from flask_mail import Message
 
 auth_bp = Blueprint('auth', __name__)
 
@@ -27,22 +30,63 @@ def login():
         return redirect(url_for('main.index'))
     
     if request.method == 'POST':
-        login_id = request.form.get('username') 
-        password = request.form.get('password')
-        
-        user = User.query.filter((User.username == login_id) | (User.email == login_id)).first()
-        
-        if user and user.check_password(password):
-            if user.is_banned:
+        login_mode = request.form.get('login_mode', 'password')
+        if login_mode == 'password':
+            login_id = request.form.get('username') 
+            password = request.form.get('password')
+            user = User.query.filter((User.username == login_id) | (User.email == login_id)).first()
+            if user and user.check_password(password):
+                if user.is_banned:
+                    flash('该账号已被封禁，无法登录', 'danger')
+                    return render_template('login.html')
+                login_user(user)
+                next_page = request.args.get('next')
+                return redirect(next_page or url_for('main.index'))
+            else:
+                flash('用户名或密码错误', 'danger')
+        elif login_mode == 'code':
+            email = request.form.get('email')
+            code = request.form.get('code')
+            user = User.query.filter_by(email=email).first()
+            code_session = session.get('login_code')
+            code_expire = session.get('login_code_expire', 0)
+            if not user:
+                flash('该邮箱未注册', 'danger')
+            elif not code or not code_session or code != code_session or time.time() > code_expire:
+                flash('验证码错误或已过期', 'danger')
+            elif user.is_banned:
                 flash('该账号已被封禁，无法登录', 'danger')
-                return render_template('login.html')
-            login_user(user)
-            next_page = request.args.get('next')
-            return redirect(next_page or url_for('main.index'))
-        else:
-            flash('用户名或密码错误', 'danger')
-            
+            else:
+                login_user(user)
+                session.pop('login_code', None)
+                session.pop('login_code_expire', None)
+                next_page = request.args.get('next')
+                return redirect(next_page or url_for('main.index'))
     return render_template('login.html')
+
+# 邮箱验证码发送API
+@auth_bp.route('/send_code', methods=['POST'])
+def send_code():
+    email = request.form.get('email')
+    if not email:
+        return jsonify({'success': False, 'msg': '邮箱不能为空'}), 400
+    user = User.query.filter_by(email=email).first()
+    if not user:
+        return jsonify({'success': False, 'msg': '该邮箱未注册'}), 400
+    # 限制发送频率
+    last_send = session.get('last_code_send', 0)
+    if time.time() - last_send < 60:
+        return jsonify({'success': False, 'msg': '请勿频繁获取验证码'}), 429
+    code = f"{random.randint(100000, 999999)}"
+    session['login_code'] = code
+    session['login_code_expire'] = time.time() + 300  # 5分钟有效
+    session['last_code_send'] = time.time()
+    try:
+        msg = Message(subject="NWW 登录验证码", recipients=[email], body=f"您的登录验证码为：{code}\n5分钟内有效。如非本人操作请忽略。")
+        mail.send(msg)
+    except Exception as e:
+        return jsonify({'success': False, 'msg': f'邮件发送失败: {e}'}), 500
+    return jsonify({'success': True, 'msg': '验证码已发送，请查收邮箱'})
 
 @auth_bp.route('/register', methods=['GET', 'POST'])
 def register():

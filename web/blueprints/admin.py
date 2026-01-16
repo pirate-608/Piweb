@@ -11,7 +11,7 @@ from web.extensions import db
 from flask import current_app
 from web.models import User, SystemSetting, UserCategoryStat
 
-admin_bp = Blueprint('admin', __name__)
+admin_bp = Blueprint('admin_bp', __name__)
 
 def validate_and_save_image(file):
     """
@@ -20,9 +20,11 @@ def validate_and_save_image(file):
     if not file or file.filename == '':
         return None, None
 
+    from werkzeug.utils import secure_filename
     ext = ''
-    if '.' in file.filename:
-        ext = '.' + file.filename.rsplit('.', 1)[1].lower()
+    filename = secure_filename(file.filename)
+    if '.' in filename:
+        ext = '.' + filename.rsplit('.', 1)[1].lower()
     
     is_valid = False
     if ext and ext[1:] in current_app.config['ALLOWED_EXTENSIONS']:
@@ -36,8 +38,12 @@ def validate_and_save_image(file):
         return None, f"不支持的文件格式 '{file.filename}'"
     
     unique_filename = str(uuid.uuid4()) + ext
+    # 分类存储到 uploads/images
+    base_upload_dir = current_app.config['UPLOAD_FOLDER']
+    save_dir = os.path.join(base_upload_dir, 'images')
+    os.makedirs(save_dir, exist_ok=True)
     try:
-        file.save(os.path.join(current_app.config['UPLOAD_FOLDER'], unique_filename))
+        file.save(os.path.join(save_dir, unique_filename))
         return unique_filename, None
     except Exception as e:
         return None, f"保存文件失败: {str(e)}"
@@ -81,7 +87,7 @@ def user_action(user_id):
     
     if user.id == current_user.id:
         flash('无法对自己执行此操作', 'warning')
-        return redirect(url_for('admin.users'))
+        return redirect(url_for('admin_bp.users'))
 
     if action == 'toggle_ban':
         user.is_banned = not user.is_banned
@@ -94,7 +100,7 @@ def user_action(user_id):
     
     db.session.commit()
     flash(msg, 'success')
-    return redirect(url_for('admin.users'))
+    return redirect(url_for('admin_bp.users'))
 
 @admin_bp.route('/admin/user/<int:user_id>')
 @login_required
@@ -241,7 +247,7 @@ def add():
                     db.session.add(q)
             db.session.commit()
             flash('题目添加处理完成！', 'success')
-            return redirect(url_for('admin.manage'))
+            return redirect(url_for('admin_bp.manage'))
     data_manager = getattr(current_app, 'data_manager', None)
     return render_template('add.html', categories=data_manager.get_categories() if data_manager else [])
 
@@ -268,13 +274,13 @@ def delete_question(id):
     db.session.delete(q)
     db.session.commit()
     if image_filename:
-        image_path = os.path.join(current_app.config['UPLOAD_FOLDER'], image_filename)
+        image_path = os.path.join(current_app.config['UPLOAD_FOLDER'], 'images', image_filename)
         if os.path.exists(image_path):
             try:
                 os.remove(image_path)
             except:
                 pass
-    return redirect(url_for('admin.manage'))
+    return redirect(url_for('admin_bp.manage'))
 
 @admin_bp.route('/edit/<int:id>', methods=['GET', 'POST'])
 @login_required
@@ -302,7 +308,7 @@ def edit_question(id):
         if content and answer and score:
             # 删除图片
             if request.form.get('delete_image') == 'yes' and image_filename:
-                old_image_path = os.path.join(current_app.config['UPLOAD_FOLDER'], image_filename)
+                old_image_path = os.path.join(current_app.config['UPLOAD_FOLDER'], 'images', image_filename)
                 if os.path.exists(old_image_path):
                     try:
                         os.remove(old_image_path)
@@ -314,10 +320,10 @@ def edit_question(id):
             new_filename, error = validate_and_save_image(file)
             if error:
                 flash(error, 'danger')
-                return redirect(url_for('admin.edit_question', id=id))
+                return redirect(url_for('admin_bp.edit_question', id=id))
             if new_filename:
                 if image_filename:
-                    old_image_path = os.path.join(current_app.config['UPLOAD_FOLDER'], image_filename)
+                    old_image_path = os.path.join(current_app.config['UPLOAD_FOLDER'], 'images', image_filename)
                     if os.path.exists(old_image_path):
                         try:
                             os.remove(old_image_path)
@@ -330,7 +336,7 @@ def edit_question(id):
             q.image = image_filename
             q.category = request.form.get('category', '默认题集')
             db.session.commit()
-            return redirect(url_for('admin.manage'))
+            return redirect(url_for('admin_bp.manage'))
     # GET 或未通过校验时渲染页面
     question_html = render_content(q.content, getattr(q, 'mode', 'html')) if q else ''
     return render_template('edit.html', question=q, question_html=question_html, id=id, categories=[]) # categories 可补全

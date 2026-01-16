@@ -1,3 +1,4 @@
+
 from flask_sqlalchemy import SQLAlchemy
 from flask_login import LoginManager
 from flask_wtf.csrf import CSRFProtect
@@ -5,6 +6,7 @@ from flask_socketio import SocketIO
 from web.config import Config
 from flask_session import Session
 from flask_migrate import Migrate
+from flask_mail import Mail
 
 import redis
 db = SQLAlchemy()
@@ -15,8 +17,18 @@ SOCKETIO_REDIS_URL = f"redis://{getattr(Config, 'REDIS_HOST', 'redis')}:{getattr
 socketio = SocketIO(
     async_mode='eventlet',
     cors_allowed_origins='*',
-    message_queue=SOCKETIO_REDIS_URL
+    message_queue=SOCKETIO_REDIS_URL,
+    ping_timeout=30,
+    ping_interval=10,
+    logger=True,
+    engineio_logger=True,
+    max_http_buffer_size=10 * 1024 * 1024,  # 10MB
+    allow_upgrades=True,
+    cors_allowed_headers='*'
 )
+
+# Flask-Mail
+mail = Mail()
 
 # Redis Access
 cache_redis = None

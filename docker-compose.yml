@@ -1,14 +1,18 @@
 version: '3.8'
-
 services:
   web:
     build: .
     ports:
       - "8080:8080"
     environment:
+      #- LOCAL_DEV=1
       - DATABASE_URL=postgresql://postgres:postgres@db:5432/grading_system
       - REDIS_HOST=redis
       - REDIS_PORT=6379
+      - REDIS_DB=0
+      - CELERY_BROKER_URL=redis://redis:6379/0
+      - CELERY_RESULT_BACKEND=redis://redis:6379/0
+      - SOCKETIO_REDIS_URL=redis://redis:6379/0
     depends_on:
       - db
       - redis
@@ -20,20 +24,10 @@ services:
       - ./questions.txt:/app/questions.txt
       # Mount uploads directory for images
       - ./web/static/uploads:/app/web/static/uploads
-      # Mount C build output for grading
-      - ./grader/build:/app/grader/build
+      # (已移除) Mount C build output for grading
       # 挂载停用词/词典目录，确保C端/服务端都能访问
-      - ./text_analyzer/dict:/app/text_analyzer/dict:ro
+      - ./text_analyzer/dict:/app/dict:ro
 
-  # 可选：CLI测试服务
-  analyzer_cli:
-    build: .
-    working_dir: /app/text_analyzer
-    command: ["./analyzer_cli.exe"]
-    volumes:
-      - ./text_analyzer/dict:/app/text_analyzer/dict:ro
-    # Enable Gunicorn reload for development
-    # command: ["sh", "-c", "python web/wait_for_db.py && gunicorn --worker-class eventlet  --bind 0.0.0.0:8080 web.app:app"]
 
   worker:
     build: .
@@ -46,6 +40,10 @@ services:
       - DATABASE_URL=postgresql://postgres:postgres@db:5432/grading_system
       - REDIS_HOST=redis
       - REDIS_PORT=6379
+      - REDIS_DB=0
+      - CELERY_BROKER_URL=redis://redis:6379/0
+      - CELERY_RESULT_BACKEND=redis://redis:6379/0
+      - SOCKETIO_REDIS_URL=redis://redis:6379/0
       - C_FORCE_ROOT=true  # Required if running as root in Docker
     depends_on:
       - db
@@ -57,7 +55,7 @@ services:
       - ./web:/app/web
       - ./web/celery_worker.py:/app/web/celery_worker.py
       # 挂载停用词/词典目录，确保C端/服务端都能访问
-      - ./text_analyzer/dict:/app/text_analyzer/dict:ro
+      - ./text_analyzer/dict:/app/dict:ro
 
   redis:
     image: redis:alpine
@@ -84,14 +82,31 @@ services:
       context: .
       dockerfile: Dockerfile.tunnel
     restart: always
-    # 改为使用 links 或 host 名访问，不再使用 service:web 模式
-    # 这样 tunnel 容器有独立的网络栈，不会因为 web 重建而丢失网络
-    # 注意: Cloudflare Dashboard 中要把 Service 配置改为 http://web:8080 (不能是 localhost)
     depends_on:
       - web
+    networks:
+      - default
+    environment:
+      - LOG_LEVEL=info
     volumes:
-      # 挂载 token 文件，这样修改 token 不需要重新构建镜像
-      - ./tunnel_token.txt:/app/tunnel_token.txt
+      - ./tunnel/eb890b0f-9acb-4a12-9a06-47eacf65050d.json:/etc/cloudflared/eb890b0f-9acb-4a12-9a06-47eacf65050d.json:ro
+      - ./tunnel/config.yml:/etc/cloudflared/config.yml:ro
+      - ./cloudflared.log:/app/cloudflared.log
+
+  nginx:
+    image: nginx:latest
+    container_name: nginx
+    restart: always
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./nginx/nginx.conf:/etc/nginx/nginx.conf
+      - ./nginx/conf.d/default.conf:/etc/nginx/conf.d/default.conf
+      - ./web/static:/web/static
+      - ./nginx/ssl:/etc/nginx/ssl
+    depends_on:
+      - web
 
 volumes:
   postgres_data:

@@ -8,21 +8,79 @@
                 <h3 class="text-center">用户登录</h3>
             </div>
             <div class="card-body">
-                <form method="POST">
+                <form method="POST" id="login-form">
                     <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
-                    <div class="mb-3">
-                        <label for="username" class="form-label">用户名 或 邮箱</label>
-                        <input type="text" class="form-control" id="username" name="username" placeholder="请输入用户名或注册邮箱" required>
-                        <div class="form-text text-muted">首次使用请先注册。初次注册时仅支持用户名，邮箱可在登录后绑定。</div>
+                    <input type="hidden" name="login_mode" id="login_mode" value="password"/>
+                    <div id="password-login-fields">
+                        <div class="mb-3">
+                            <label for="username" class="form-label">用户名 或 邮箱</label>
+                            <input type="text" class="form-control" id="username" name="username" placeholder="请输入用户名或注册邮箱" required>
+                            <div class="form-text text-muted">首次使用请先注册。初次注册时仅支持用户名，邮箱可在登录后绑定。</div>
+                        </div>
+                        <div class="mb-3">
+                            <label for="password" class="form-label">密码</label>
+                            <input type="password" class="form-control" id="password" name="password" required>
+                        </div>
                     </div>
-                    <div class="mb-3">
-                        <label for="password" class="form-label">密码</label>
-                        <input type="password" class="form-control" id="password" name="password" required>
+                    <div id="code-login-fields" style="display:none;">
+                        <div class="mb-3">
+                            <label for="email" class="form-label">注册邮箱</label>
+                            <input type="email" class="form-control" id="email" name="email" placeholder="请输入注册邮箱">
+                        </div>
+                        <div class="mb-3 d-flex align-items-center">
+                            <input type="text" class="form-control me-2" id="code" name="code" placeholder="验证码">
+                            <button type="button" class="btn btn-outline-secondary" id="send-code-btn">获取验证码</button>
+                        </div>
                     </div>
                     <div class="d-grid gap-2">
                         <button type="submit" class="btn btn-primary">登录</button>
                     </div>
                 </form>
+                <div class="text-center mt-3">
+                    <button class="btn btn-link" id="toggle-login-mode" type="button">使用验证码登录</button>
+                </div>
+                <script>
+                const toggleBtn = document.getElementById('toggle-login-mode');
+                const loginModeInput = document.getElementById('login_mode');
+                const passwordFields = document.getElementById('password-login-fields');
+                const codeFields = document.getElementById('code-login-fields');
+                let mode = 'password';
+                toggleBtn.addEventListener('click', function() {
+                    if (mode === 'password') {
+                        passwordFields.style.display = 'none';
+                        codeFields.style.display = '';
+                        loginModeInput.value = 'code';
+                        toggleBtn.textContent = '使用密码登录';
+                        mode = 'code';
+                    } else {
+                        passwordFields.style.display = '';
+                        codeFields.style.display = 'none';
+                        loginModeInput.value = 'password';
+                        toggleBtn.textContent = '使用验证码登录';
+                        mode = 'password';
+                    }
+                });
+                document.getElementById('send-code-btn').addEventListener('click', function() {
+                    const email = document.getElementById('email').value;
+                    if (!email) {
+                        alert('请输入注册邮箱');
+                        return;
+                    }
+                    fetch('{{ url_for('auth.send_code') }}', {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/x-www-form-urlencoded',
+                            'X-CSRFToken': document.querySelector('input[name="csrf_token"]').value
+                        },
+                        body: 'email=' + encodeURIComponent(email)
+                    })
+                    .then(resp => resp.json())
+                    .then(data => {
+                        alert(data.msg);
+                    })
+                    .catch(() => alert('请求失败'));
+                });
+                </script>
             </div>
             <div class="card-footer text-center">
                 <small>还没有账号？ <a href="{{ url_for('auth.register') }}">立即注册</a></small>

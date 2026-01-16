@@ -9,7 +9,7 @@
             {% if current_user.is_authenticated %}
                 <a href="{{ url_for('exam.start_exam') }}" class="btn btn-outline-light btn-lg px-4 me-md-2">⚔️ 开始试炼</a>
                 {% if current_user.is_admin %}
-                    <a href="{{ url_for('admin.add') }}" class="btn btn-outline-secondary btn-lg px-4">📜 发布任务</a>
+                    <a href="{{ url_for('admin_bp.add') }}" class="btn btn-outline-secondary btn-lg px-4">📜 发布任务</a>
                 {% endif %}
             {% else %}
                 <a href="{{ url_for('auth.login') }}" class="btn btn-outline-light btn-lg px-4 me-md-2">登录</a>
@@ -36,7 +36,7 @@
             {% if current_user.is_admin %}
             <div class="collapse" id="editAnnouncementForm">
                 <div class="card-body border-bottom bg-light">
-                    <form action="{{ url_for('admin.update_announcement') }}" method="post">
+                    <form action="{{ url_for('admin_bp.update_announcement') }}" method="post">
                         <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
                         <div class="mb-3">
                             <label for="announcementContent" class="form-label">公告内容</label>
@@ -85,7 +85,7 @@
             {% if current_user.is_admin %}
             <div class="collapse" id="editGuideForm">
                 <div class="card-body border-bottom bg-light">
-                    <form action="{{ url_for('admin.update_guide') }}" method="post">
+                    <form action="{{ url_for('admin_bp.update_guide') }}" method="post">
                         <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
                         <div class="mb-3">
                             <label for="guideContent" class="form-label">指南内容 (支持 HTML)</label>
