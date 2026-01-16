@@ -107,9 +107,9 @@ class Config:
         SESSION_COOKIE_SECURE = False
         SESSION_COOKIE_DOMAIN = None
     else:
-        SESSION_COOKIE_SAMESITE = 'None'  # Cloudflare Tunnel/HTTPS 必须为 None
-        SESSION_COOKIE_SECURE = True      # Cloudflare Tunnel/HTTPS 必须为 True
-        SESSION_COOKIE_DOMAIN = '.67656.fun'  # Cloudflare Tunnel/自定义域名，前面有点
+        SESSION_COOKIE_SAMESITE = 'None'  # HTTPS/多域名场景建议为 None
+        SESSION_COOKIE_SECURE = True      # HTTPS 场景建议为 True
+        SESSION_COOKIE_DOMAIN = '.67656.fun'  # 自定义域名，前面有点
     SESSION_COOKIE_PATH = '/'
 
     # Trusted Origins for CSRF (Add your custom domains here)

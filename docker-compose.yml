@@ -77,21 +77,6 @@ services:
       # Note: If you have a local postgres running on 5432, change the first number (e.g. "5433:5432")
       - "5432:5432"
 
-  tunnel:
-    build:
-      context: .
-      dockerfile: Dockerfile.tunnel
-    restart: always
-    depends_on:
-      - web
-    networks:
-      - default
-    environment:
-      - LOG_LEVEL=info
-    volumes:
-      - ./tunnel/eb890b0f-9acb-4a12-9a06-47eacf65050d.json:/etc/cloudflared/eb890b0f-9acb-4a12-9a06-47eacf65050d.json:ro
-      - ./tunnel/config.yml:/etc/cloudflared/config.yml:ro
-      - ./cloudflared.log:/app/cloudflared.log
 
   nginx:
     image: nginx:latest
