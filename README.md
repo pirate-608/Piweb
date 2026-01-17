@@ -80,7 +80,7 @@ python app.py
     ngrok config add-authtoken <你的token>
     ngrok http 5000
     ```
-3. 生产环境建议用 Cloudflare Tunnel，开发/演示可用 ngrok，注意免费版有流量/连接数限制。
+3. 生产环境建议直接用 Nginx 代理，开发/演示可用 ngrok，注意免费版有流量/连接数限制。
 
 
 ### C 代码编译与构建（CMake 方式）
