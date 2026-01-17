@@ -2,10 +2,10 @@
 FROM python:3.11-slim
 
 
-# Install system dependencies
-# gcc, ninja-build: For compiling the autograding C core with CMake
-# libpq-dev: For PostgreSQL adapter (psycopg2)
-RUN apt-get update && apt-get install -y \
+
+# 使用清华源加速 Debian/Ubuntu 包拉取
+RUN sed -i 's@http://deb.debian.org@https://mirrors.tuna.tsinghua.edu.cn@g' /etc/apt/sources.list \
+    && apt-get update && apt-get install -y \
     gcc \
     g++ \
     ninja-build \
