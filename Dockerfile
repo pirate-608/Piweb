@@ -1,10 +1,15 @@
 # Use an official Python runtime as a parent image
-FROM python:3.11-slim
+FROM python:3.11-slim-bookworm
 
-
-
-# 使用清华源加速 Debian/Ubuntu 包拉取
-RUN sed -i 's@http://deb.debian.org@https://mirrors.tuna.tsinghua.edu.cn@g' /etc/apt/sources.list \
+# 递归替换所有 debian.org 相关源为阿里云（支持 http/https，sources.list 及 sources.list.d）
+RUN find /etc/apt/ -name "*.list" -exec sed -i \
+    -e 's@http://deb.debian.org@https://mirrors.aliyun.com@g' \
+    -e 's@https://deb.debian.org@https://mirrors.aliyun.com@g' \
+    -e 's@http://security.debian.org@https://mirrors.aliyun.com@g' \
+    -e 's@https://security.debian.org@https://mirrors.aliyun.com@g' \
+    -e 's@http://deb.debian.net@https://mirrors.aliyun.com@g' \
+    -e 's@https://deb.debian.net@https://mirrors.aliyun.com@g' \
+    {} + \
     && apt-get update && apt-get install -y \
     gcc \
     g++ \
@@ -13,15 +18,12 @@ RUN sed -i 's@http://deb.debian.org@https://mirrors.tuna.tsinghua.edu.cn@g' /etc
     libpq-dev \
     && rm -rf /var/lib/apt/lists/*
 
-
-
 # 全局COPY grader、text_analyzer、根CMakeLists.txt
 WORKDIR /app
 COPY grader ./grader
 COPY text_analyzer ./text_analyzer
 COPY CMakeLists.txt ./
 COPY text_analyzer/dict ./text_analyzer/dict
-
 
 # 安装Python依赖
 COPY web/requirements.txt requirements.txt
