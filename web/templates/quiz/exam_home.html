@@ -2,6 +2,28 @@
 
 {% block content %}
 <div class="container py-5">
+    <!-- 面包屑导航 -->
+    <nav aria-label="breadcrumb">
+      <ol class="breadcrumb bg-white px-0 mb-4">
+        <li class="breadcrumb-item"><a href="{{ url_for('main.index') }}">首页</a></li>
+        <li class="breadcrumb-item"><a href="{{ url_for('exam.start_exam') }}">答题中心</a></li>
+        {% if request.endpoint == 'exam.select_set' %}
+          <li class="breadcrumb-item active" aria-current="page">选择题目集</li>
+        {% elif request.endpoint == 'exam.history' %}
+          <li class="breadcrumb-item active" aria-current="page">历史记录</li>
+        {% elif request.endpoint == 'main.leaderboard' %}
+          <li class="breadcrumb-item active" aria-current="page">排行榜</li>
+        {% elif request.endpoint == 'admin_bp.add' %}
+          <li class="breadcrumb-item"><a href="{{ url_for('admin_bp.manage') }}">题目管理</a></li>
+          <li class="breadcrumb-item active" aria-current="page">添加题目</li>
+        {% elif request.endpoint == 'admin_bp.manage' %}
+          <li class="breadcrumb-item active" aria-current="page">题目管理</li>
+        {% else %}
+          <!-- 答题中心主页不显示额外层级 -->
+        {% endif %}
+      </ol>
+    </nav>
+
     <div class="text-center mb-5">
         <h1 class="display-5 fw-bold">答题主页</h1>
         <p class="lead text-body-secondary">欢迎来到答题中心。请选择功能入口：</p>
