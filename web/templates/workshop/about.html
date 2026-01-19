@@ -1,0 +1,20 @@
+{% extends 'base.html' %}
+{% block title %}工坊 - 关于{% endblock %}
+{% block content %}
+<div class="container mt-4">
+  <nav aria-label="breadcrumb" class="mb-3">
+    <ol class="breadcrumb">
+      <li class="breadcrumb-item"><a href="/">首页</a></li>
+      <li class="breadcrumb-item"><a href="{{ url_for('workshop.home') }}">工坊</a></li>
+      <li class="breadcrumb-item active">关于工坊</li>
+    </ol>
+  </nav>
+  <h2>关于工坊</h2>
+  <p class="lead">工坊是一个面向协作与创作的空间，支持多人协作、作品发布、标签管理与目录跳转等功能。未来将持续扩展更多创意工具与社区互动。</p>
+  <ul>
+    <li>了解工坊的愿景与规则</li>
+    <li>探索协作与创作的多样方式</li>
+    <li>加入我们，共同成长</li>
+  </ul>
+</div>
+{% endblock %}

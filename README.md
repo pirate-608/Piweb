@@ -120,7 +120,9 @@ cd build/text_analyzer
     在项目根目录下打开终端，运行：
     ```powershell
 
-    docker-compose up -d --build #启动所有服务
+    docker-compose up -d --build #构建并启动所有服务
+    
+    docker-compose up #仅启动不构建
 
     docker-compose restart web #仅重新启动 web 服务
 
@@ -134,7 +136,7 @@ cd build/text_analyzer
 
     ```
 2.  **访问平台**：
-    浏览器打开 http://localhost:8000
+    浏览器打开 http://localhost:18080
 
 #### 本地开发环境（可选）
 

@@ -205,7 +205,7 @@ def manage():
         query = query.filter(Question.content.ilike(f'%{search}%'))
     pagination = query.order_by(Question.id.desc()).paginate(page=page, per_page=10, error_out=False)
     categories = data_manager.get_categories() if data_manager else []
-    return render_template('manage.html', 
+    return render_template('quiz/manage.html', 
                          questions=pagination.items, 
                          pagination=pagination,
                          search=search,
@@ -249,7 +249,7 @@ def add():
             flash('题目添加处理完成！', 'success')
             return redirect(url_for('admin_bp.manage'))
     data_manager = getattr(current_app, 'data_manager', None)
-    return render_template('add.html', categories=data_manager.get_categories() if data_manager else [])
+    return render_template('quiz/add.html', categories=data_manager.get_categories() if data_manager else [])
 
 @admin_bp.route('/delete/<int:id>', methods=['POST'])
 @login_required

@@ -37,35 +37,46 @@ def batch_delete_history():
 def select_set():
     data_manager = getattr(current_app, 'data_manager', None)
     questions = data_manager.load_questions() if data_manager else []
-    if not questions:
-        flash('题库为空，请先添加题目！', 'warning')
-        return redirect(url_for('main.index'))
-        
     categories = {}
     category_types = {}
-    # 兼容个人题库机制：如题目有 'is_personal' 字段则标记，否则默认为公共题库
     for q in questions:
         cat = q.get('category', '默认题集')
         categories[cat] = categories.get(cat, 0) + 1
-        # 个人题库机制：如果题目有 is_personal 字段且为 True，则标记为个人题库
         if q.get('is_personal'):
             category_types[cat] = 'personal'
         else:
-            # 若未标记则默认为公共题库
             if cat not in category_types:
                 category_types[cat] = 'public'
-    
     return render_template(
-        'select_set.html',
+        'quiz/select_set.html',
         categories=categories,
         total_count=len(questions),
-        category_types=category_types
+        category_types=category_types,
+        questions_empty=(len(questions)==0)
     )
 
 @exam_bp.route('/start_exam')
 @login_required
 def start_exam():
-    return redirect(url_for('exam.select_set'))
+    data_manager = getattr(current_app, 'data_manager', None)
+    questions = data_manager.load_questions() if data_manager else []
+    # 仪表盘数据
+    stats = data_manager.get_system_stats() if data_manager else None
+    user_stats = None
+    if current_user.is_authenticated and not current_user.is_admin:
+        from web.models import UserCategoryStat
+        ug_stats_query = UserCategoryStat.query.filter_by(user_id=current_user.id).all()
+        ug_total_exams = sum(s.total_attempts for s in ug_stats_query)
+        ug_total_score = sum(s.total_score for s in ug_stats_query)
+        ug_total_max = sum(s.total_max_score for s in ug_stats_query)
+        ug_accuracy = 0
+        if ug_total_max > 0:
+            ug_accuracy = round((ug_total_score / ug_total_max) * 100, 1)
+        user_stats = {
+            'total_exams': ug_total_exams,
+            'avg_accuracy': ug_accuracy
+        }
+    return render_template('quiz/exam_home.html', questions_empty=(len(questions)==0), stats=stats, user_stats=user_stats)
 
 @exam_bp.route('/exam', methods=['GET', 'POST'])
 @login_required
@@ -119,7 +130,7 @@ def exam():
         elapsed = datetime.now().timestamp() - start_time
         remaining_sec = max(0, int(duration_sec - elapsed))
         
-        return render_template('exam.html', questions=shuffled_questions, remaining_sec=remaining_sec)
+        return render_template('quiz/exam.html', questions=shuffled_questions, remaining_sec=remaining_sec)
 
     if request.method == 'POST':
         ids = session.get('exam_ids')
@@ -151,7 +162,7 @@ def exam():
 @exam_bp.route('/waiting/<task_id>')
 @login_required
 def waiting(task_id):
-    return render_template('waiting.html', task_id=task_id)
+    return render_template('quiz/waiting.html', task_id=task_id)
 
 @exam_bp.route('/queue/status/<task_id>')
 @login_required
@@ -180,9 +191,9 @@ def history():
             results = [r for r in results if r.get('timestamp', '') >= start_time]
         if end_time:
             results = [r for r in results if r.get('timestamp', '') <= end_time]
-        return render_template('history.html', results=results, search_query=q, start_time=start_time, end_time=end_time)
+        return render_template('quiz/history.html', results=results, search_query=q, start_time=start_time, end_time=end_time)
         
-    return render_template('history.html', results=results, search_query=q)
+    return render_template('quiz/history.html', results=results, search_query=q)
 
 @exam_bp.route('/history/view/<result_id>')
 @login_required
@@ -197,7 +208,7 @@ def view_history(result_id):
         flash('您没有权限查看此记录', 'danger')
         return redirect(url_for('exam.history'))
         
-    return render_template('result.html', total_score=record['total_score'], results=record['details'], is_history=True)
+    return render_template('quiz/result.html', total_score=record['total_score'], results=record['details'], is_history=True)
 
 @exam_bp.route('/export_history')
 @login_required

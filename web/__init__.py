@@ -23,6 +23,8 @@ def create_app(config_class=Config):
     from web.blueprints.exam import exam_bp
     from web.blueprints.admin import admin_bp
     from web.blueprints.forum import forum_bp
+    from web.blueprints.workshop import workshop_bp
+    from web.blueprints.workshop_admin import workshop_admin_bp
     # 延迟导入，彻底消除循环依赖
     from web.utils.data_manager import DataManager
     from services.grading import GradingService
@@ -107,6 +109,8 @@ def create_app(config_class=Config):
     app.register_blueprint(admin_bp)
 
     app.register_blueprint(forum_bp) # url_prefix='/forum' defined in blueprint
+    app.register_blueprint(workshop_bp) # url_prefix='/workshop' defined in blueprint
+    app.register_blueprint(workshop_admin_bp) # url_prefix='/workshop/admin' defined in blueprint
 
     # Register Global Hooks
     @app.after_request
@@ -164,5 +168,27 @@ def create_app(config_class=Config):
         print(f"[DEBUG] join room: {room}")
         if room:
             join_room(room)
+
+    @socketio.on('leave')
+    def on_leave(data):
+        from flask_socketio import leave_room
+        room = data.get('room')
+        print(f"[DEBUG] leave room: {room}")
+        if room:
+            leave_room(room)
+
+    @socketio.on('connect')
+    def on_connect():
+        from flask import request
+        print(f"[SocketIO] Client connected: {request.sid}")
+
+    @socketio.on('disconnect')
+    def on_disconnect():
+        from flask import request
+        print(f"[SocketIO] Client disconnected: {request.sid}")
+
+    @socketio.on('draft_status')
+    def on_draft_status(data):
+        print(f"[SocketIO] draft_status event received: {data}")
 
     return app

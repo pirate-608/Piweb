@@ -1,0 +1,62 @@
+{% extends 'base.html' %}
+{% block title %}{{ work.title }} - 工坊作品{% endblock %}
+{% block content %}
+<div class="container mt-4">
+  <nav aria-label="breadcrumb" class="mb-3">
+    <ol class="breadcrumb">
+      <li class="breadcrumb-item"><a href="/">首页</a></li>
+      <li class="breadcrumb-item"><a href="{{ url_for('workshop.home') }}">工坊</a></li>
+      <li class="breadcrumb-item active">作品详情</li>
+    </ol>
+  </nav>
+  <div class="d-flex justify-content-end align-items-center mb-3">
+    {% if work.is_collab %}
+    <a href="/workshop/coeditor/{{ work.id }}" class="btn btn-warning">协作编辑</a>
+    {% endif %}
+  </div>
+  <div class="row">
+    <div class="col-lg-9 col-12">
+      <h2>{{ work.title }}</h2>
+      <div class="text-muted mb-2">作者：{{ work.user.username }} | 类型：{{ '协作' if work.pub_type=='collab' else '个人' }} | 主题：{{ work.theme }} | 发布时间：{{ work.created_at.strftime('%Y-%m-%d %H:%M') }}</div>
+      <div class="mb-3">{{ work.description }}</div>
+      <hr>
+      <div class="mb-4 markdown-body">{{ content_html|safe }}</div>
+      <a href="/workshop/discover" class="btn btn-outline-secondary">返回发现</a>
+    </div>
+    {% if toc and toc|length > 0 %}
+    <div class="col-lg-3 d-none d-lg-block">
+      <div class="sticky-top" style="top: 80px;">
+        <button class="btn btn-sm btn-outline-secondary w-100 mb-2" type="button" data-bs-toggle="collapse" data-bs-target="#tocSidebar" aria-expanded="true" aria-controls="tocSidebar">
+          <strong class="toc-title">目录</strong>
+        </button>
+        <div class="collapse show" id="tocSidebar">
+          <ul class="list-unstyled ms-1">
+            {% for item in toc %}
+              <li style="margin-left: {{ (item.level-1)*16 }}px;">
+                <strong><a href="#{{ item.anchor }}">{{ item.text }}</a></strong>
+              </li>
+            {% endfor %}
+          </ul>
+        </div>
+      </div>
+    </div>
+    {% endif %}
+  </div>
+</div>
+<script>
+// 平滑滚动到锚点
+document.addEventListener('DOMContentLoaded', function() {
+  document.querySelectorAll('.toc-title ~ ul a, #tocSidebar a').forEach(function(link) {
+    link.addEventListener('click', function(e) {
+      var targetId = this.getAttribute('href').slice(1);
+      var target = document.getElementById(targetId);
+      if(target) {
+        e.preventDefault();
+        window.scrollTo({top: target.getBoundingClientRect().top + window.scrollY - 60, behavior: 'smooth'});
+        history.replaceState(null, '', '#' + targetId);
+      }
+    });
+  });
+});
+</script>
+{% endblock %}

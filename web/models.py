@@ -7,10 +7,48 @@ import json
 from sqlalchemy import event
 from sqlalchemy.engine import Engine
 
+# 工坊正式作品表
+class WorkshopWork(db.Model):
+    __tablename__ = 'workshop_work'
+    id = db.Column(db.Integer, primary_key=True)
+    user_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False)
+    title = db.Column(db.String(128), nullable=False)
+    description = db.Column(db.Text)
+    content = db.Column(db.Text)
+    pub_type = db.Column(db.String(32))  # personal/collab
+    theme = db.Column(db.String(64))
+    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+    updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+    keywords = db.Column(db.String(256))  # 关键词，逗号分隔或JSON
+    views = db.Column(db.Integer, default=0)  # 浏览量
+    likes = db.Column(db.Integer, default=0)  # 点赞数
+    is_collab = db.Column(db.Boolean, default=False)  # 是否协作作品
+    hotness = db.Column(db.Float, default=0.0, index=True)  # 热度分数
+    user = db.relationship('User', foreign_keys=[user_id], backref=db.backref('workshop_works', lazy=True))
+    # 协作编辑锁
+    edit_lock_user_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=True)
+    edit_lock_time = db.Column(db.DateTime, nullable=True)
+    edit_lock_user = db.relationship('User', foreign_keys=[edit_lock_user_id], backref='editing_works')
+
+# 协作编辑历史表
+class WorkshopWorkEditHistory(db.Model):
+    __tablename__ = 'workshop_work_edit_history'
+    id = db.Column(db.Integer, primary_key=True)
+    work_id = db.Column(db.Integer, db.ForeignKey('workshop_work.id'), nullable=False)
+    user_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=True)
+    is_anonymous = db.Column(db.Boolean, default=False)
+    edit_time = db.Column(db.DateTime, default=datetime.utcnow)
+    old_content = db.Column(db.Text)
+    new_content = db.Column(db.Text)
+    summary = db.Column(db.String(256))
+    work = db.relationship('WorkshopWork', backref=db.backref('edit_history', lazy=True, cascade="all, delete-orphan"))
+    user = db.relationship('User', backref=db.backref('edit_histories', lazy=True))
+
 class WorkshopDraft(db.Model):
     __tablename__ = 'workshop_draft'
     id = db.Column(db.Integer, primary_key=True)
     user_id = db.Column(db.Integer, db.ForeignKey('user.id'))
+    work_id = db.Column(db.Integer, db.ForeignKey('workshop_work.id'), nullable=True)  # 新增，支持草稿与作品关联
     title = db.Column(db.String(128), nullable=False)
     description = db.Column(db.Text)
     content = db.Column(db.Text)
@@ -18,6 +56,7 @@ class WorkshopDraft(db.Model):
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
     updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
     user = db.relationship('User', backref='workshop_drafts')
+    work = db.relationship('WorkshopWork', backref='drafts', foreign_keys=[work_id])
 
 class Post(db.Model):
     id = db.Column(db.Integer, primary_key=True)

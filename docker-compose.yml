@@ -3,7 +3,7 @@ services:
   web:
     build: .
     ports:
-      - "8080:8080"
+      - "18080:8080"
     environment:
       - LOCAL_DEV=1
       - DATABASE_URL=postgresql://postgres:postgres@db:5432/grading_system

@@ -1,0 +1,207 @@
+{% extends 'base.html' %}
+{% block title %}工坊管理后台{% endblock %}
+{% block content %}
+<div class="container py-4">
+  <input type="hidden" id="csrf_token" value="{{ csrf_token() }}">
+  <nav aria-label="breadcrumb" class="mb-3">
+    <ol class="breadcrumb">
+      <li class="breadcrumb-item"><a href="/workshop/discover">工坊</a></li>
+      <li class="breadcrumb-item active">管理后台</li>
+    </ol>
+  </nav>
+  <h2 class="mb-4 text-danger">工坊管理后台</h2>
+  <div class="row mb-4">
+    <div class="col-md-3 mb-2">
+      <a href="#works" class="btn btn-outline-primary w-100">作品管理</a>
+    </div>
+    <div class="col-md-3 mb-2">
+      <a href="#hotness" class="btn btn-outline-warning w-100">热度参数</a>
+    </div>
+    <div class="col-md-3 mb-2">
+      <a href="#refresh" class="btn btn-outline-success w-100">刷新热度</a>
+    </div>
+  </div>
+  <hr>
+  <h4 id="works">作品管理</h4>
+  <form id="admin-search-form" class="row g-2 align-items-center mb-3">
+    <div class="col-md-4 col-12">
+      <input type="text" class="form-control" id="admin-search-keyword" placeholder="搜索标题/作者/关键词...">
+    </div>
+    <div class="col-md-2 col-6">
+      <button type="submit" class="btn btn-primary w-100">搜索</button>
+    </div>
+  </form>
+  <table class="table table-dark table-striped align-middle">
+    <thead>
+      <tr>
+        <th>ID</th><th>标题</th><th>作者</th><th>协作</th><th>热度</th><th>操作</th>
+      </tr>
+    </thead>
+    <tbody id="works-tbody">
+      <!-- 动态加载 -->
+    </tbody>
+  </table>
+  <hr>
+  <h4 id="hotness">热度参数</h4>
+  <form id="hotnessForm" class="row g-2 align-items-center mb-3">
+    <div class="col-md-2 col-6">
+      <label class="form-label">浏览权重 w1</label>
+      <input type="number" step="0.01" class="form-control" name="w1" required>
+    </div>
+    <div class="col-md-2 col-6">
+      <label class="form-label">点赞权重 w2</label>
+      <input type="number" step="0.01" class="form-control" name="w2" required>
+    </div>
+    <div class="col-md-2 col-6">
+      <label class="form-label">时间衰减 g</label>
+      <input type="number" step="0.01" class="form-control" name="g" required>
+    </div>
+    <div class="col-md-2 col-6 align-self-end">
+      <button type="submit" class="btn btn-warning w-100">保存参数</button>
+    </div>
+  </form>
+  <div class="mb-3">
+    <button id="refreshHotnessBtn" class="btn btn-success">手动刷新所有作品热度</button>
+  </div>
+</div>
+{% endblock %}
+{% block scripts %}
+<script>
+// 作品列表加载（支持搜索）
+function loadWorks() {
+  const keyword = document.getElementById('admin-search-keyword')?.value || '';
+  fetch(`/workshop/admin/api/works?per_page=100&keyword=${encodeURIComponent(keyword)}`)
+    .then(r=>r.json()).then(data=>{
+    const tbody = document.getElementById('works-tbody');
+    tbody.innerHTML = '';
+    data.works.forEach(w => {
+      let hotnessStr = '';
+      if (typeof w.hotness === 'number' && !isNaN(w.hotness)) {
+        hotnessStr = w.hotness.toFixed(2);
+      } else if (w.hotness !== undefined && w.hotness !== null && w.hotness !== '') {
+        hotnessStr = String(w.hotness);
+      }
+      tbody.innerHTML += `<tr>
+        <td>${w.id}</td>
+        <td>${w.title}</td>
+        <td>${w.author}</td>
+        <td>${w.is_collab ? '协作' : '个人'}</td>
+        <td>${hotnessStr}</td>
+        <td>
+          <button class=\"btn btn-sm btn-danger\" onclick=\"deleteWork(${w.id})\">删除</button>
+          <button class=\"btn btn-sm btn-secondary\" onclick=\"toggleMode(${w.id})\">切换模式</button>
+        </td>
+      </tr>`;
+    });
+  });
+}
+// 搜索表单
+document.addEventListener('DOMContentLoaded', function() {
+  const form = document.getElementById('admin-search-form');
+  if(form) {
+    form.onsubmit = function(e) {
+      e.preventDefault();
+      loadWorks();
+    }
+  }
+});
+function deleteWork(id) {
+  if(!confirm('确定永久删除该作品？')) return;
+  fetch(`/workshop/admin/works/${id}/delete`, {
+    method:'POST',
+    headers: {
+      'X-CSRFToken': document.getElementById('csrf_token').value
+    }
+  })
+    .then(async r => {
+      if (r.ok) {
+        const res = await r.json();
+        alert(res.msg);
+        loadWorks();
+      } else {
+        let msg = '请求失败';
+        try { msg = (await r.json()).msg || msg; } catch(e) {}
+        alert(msg);
+      }
+    });
+}
+function toggleMode(id) {
+  fetch(`/workshop/admin/works/${id}/toggle_mode`, {
+    method:'POST',
+    headers: {
+      'X-CSRFToken': document.getElementById('csrf_token').value
+    }
+  })
+    .then(async r => {
+      if (r.ok) {
+        const res = await r.json();
+        alert(res.msg);
+        loadWorks();
+      } else {
+        let msg = '请求失败';
+        try { msg = (await r.json()).msg || msg; } catch(e) {}
+        alert(msg);
+      }
+    });
+}
+// 热度参数加载与保存
+function loadHotnessParams() {
+  fetch('/workshop/admin/config/hotness', {method:'GET'})
+    .then(async r => {
+      if (r.ok) {
+        const data = await r.json();
+        if(data.success) {
+          document.querySelector('input[name=w1]').value = data.weights.w1;
+          document.querySelector('input[name=w2]').value = data.weights.w2;
+          document.querySelector('input[name=g]').value = data.weights.g;
+        }
+      } else {
+        alert('热度参数加载失败');
+      }
+    });
+}
+document.getElementById('hotnessForm').onsubmit = function(e) {
+  e.preventDefault();
+  const fd = new FormData(this);
+  fetch('/workshop/admin/config/hotness', {
+    method:'POST',
+    body:fd,
+    headers: {
+      'X-CSRFToken': document.getElementById('csrf_token').value
+    }
+  })
+    .then(async r => {
+      if (r.ok) {
+        const res = await r.json();
+        alert(res.msg);
+      } else {
+        let msg = '请求失败';
+        try { msg = (await r.json()).msg || msg; } catch(e) {}
+        alert(msg);
+      }
+    });
+}
+document.getElementById('refreshHotnessBtn').onclick = function() {
+  fetch('/workshop/admin/update_hotness', {
+    method:'POST',
+    headers: {
+      'X-CSRFToken': document.getElementById('csrf_token').value
+    }
+  })
+    .then(async r => {
+      if (r.ok) {
+        const res = await r.json();
+        alert(res.msg);
+        loadWorks();
+      } else {
+        let msg = '请求失败';
+        try { msg = (await r.json()).msg || msg; } catch(e) {}
+        alert(msg);
+      }
+    });
+}
+// 初始化
+loadWorks();
+loadHotnessParams();
+</script>
+{% endblock %}

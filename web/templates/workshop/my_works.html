@@ -1,0 +1,26 @@
+{% extends 'base.html' %}
+{% block title %}我的作品{% endblock %}
+{% block content %}
+<div class="container mt-4">
+  <nav aria-label="breadcrumb" class="mb-3">
+    <ol class="breadcrumb">
+      <li class="breadcrumb-item"><a href="/">首页</a></li>
+      <li class="breadcrumb-item"><a href="{{ url_for('workshop.home') }}">工坊</a></li>
+      <li class="breadcrumb-item active">我的作品</li>
+    </ol>
+  </nav>
+  <h2>我的作品</h2>
+  <div id="works-list"></div>
+  <nav>
+    <ul class="pagination" id="works-pagination"></ul>
+  </nav>
+</div>
+<style>
+/* 修复表格悬停时文字变灰问题，保证深色模式下依然高对比 */
+.table-hover tbody tr:hover td, .table-hover tbody tr:hover th {
+  color: var(--text-primary, #e0e0e0) !important;
+  background-color: #23272b !important;
+}
+</style>
+<script src="/static/js/my_works.js"></script>
+{% endblock %}

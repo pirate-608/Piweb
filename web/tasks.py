@@ -1,3 +1,5 @@
+import eventlet
+eventlet.monkey_patch()
 from web.extensions import socketio
 from web.extensions import db, cache_redis
 from web.models import WorkshopDraft
@@ -7,7 +9,7 @@ from flask import current_app
 # 保存草稿Celery任务
 from celery import shared_task
 @shared_task(bind=True)
-def save_draft_task(self, user_id, title, content, description, draft_type):
+def save_draft_task(self, user_id, title, content, description, draft_type, work_id=None):
     task_id = self.request.id
     # 推送开始
     room_name = task_id
@@ -17,18 +19,29 @@ def save_draft_task(self, user_id, title, content, description, draft_type):
         print(f"[Celery] SocketIO emit failed: {e}")
     # 保存/更新草稿
     try:
-        draft = WorkshopDraft.query.filter_by(user_id=user_id, title=title).first()
+        query = WorkshopDraft.query.filter_by(user_id=user_id)
+        if work_id:
+            query = query.filter_by(work_id=work_id)
+        else:
+            query = query.filter_by(title=title)
+        draft = query.first()
+        from datetime import datetime
         if draft:
             draft.content = content
             draft.description = description
             draft.type = draft_type
+            if work_id:
+                draft.work_id = work_id
+            draft.updated_at = datetime.utcnow()
         else:
             draft = WorkshopDraft(
                 user_id=user_id,
+                work_id=work_id,
                 title=title,
                 description=description,
                 content=content,
-                type=draft_type
+                type=draft_type,
+                updated_at=datetime.utcnow()
             )
             db.session.add(draft)
         db.session.commit()

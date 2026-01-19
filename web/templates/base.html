@@ -11,6 +11,7 @@
     <link rel="icon" type="image/png" sizes="16x16" href="/static/favicon/favicon-16x16.png?v={{ static_version }}">
     <link rel="manifest" href="/static/favicon/site.webmanifest?v={{ static_version }}">
     <link href="{{ url_for('static', filename='css/bootstrap.min.css') }}?v={{ static_version }}" rel="stylesheet">
+    <link href="{{ url_for('static', filename='css/markdown-body.css') }}?v={{ static_version }}" rel="stylesheet">
     <!-- Dropzone CSS -->
     {% if dropzone %}{{ dropzone.load_css() }}{% endif %}
     <style>
@@ -103,22 +104,10 @@
                                     <a class="nav-link" href="{{ url_for('exam.start_exam') }}">答题</a>
                                 </li>
                                 <li class="nav-item">
-                                    <a class="nav-link" href="{{ url_for('exam.history') }}">历史记录</a>
-                                </li>
-                                <li class="nav-item">
-                                    <a class="nav-link" href="{{ url_for('main.leaderboard') }}">🏆 排行榜</a>
-                                </li>
-                                <li class="nav-item">
                                     <a class="nav-link" href="{{ url_for('forum.index') }}">💬 论坛</a>
                                 </li>
                                 <li class="nav-item">
-                                    <a class="nav-link" href="{{ url_for('admin_bp.add') }}">添加题目</a>
-                                </li>
-                                <li class="nav-item">
-                                    <a class="nav-link" href="{{ url_for('admin_bp.manage') }}">管理题目</a>
-                                </li>
-                                <li class="nav-item">
-                                    <a class="nav-link" href="{{ url_for('main.workshop_editor') }}">🛠️ 工坊</a>
+                                    <a class="nav-link" href="{{ url_for('workshop.home') }}">🛠️ 工坊</a>
                                 </li>
                                 {% if current_user.is_admin %}
                                 <li class="nav-item">
@@ -179,5 +168,6 @@
     <script src="{{ url_for('static', filename='js/bootstrap.bundle.min.js') }}"></script>
     <!-- Dropzone JS -->
     {% if dropzone %}{{ dropzone.load_js() }}{% endif %}
+    {% block scripts %}{% endblock %}
 </body>
 </html>

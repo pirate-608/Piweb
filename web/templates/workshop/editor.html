@@ -2,6 +2,13 @@
 {% block title %}工坊创作{% endblock %}
 {% block content %}
 <div class="container mt-4">
+  <nav aria-label="breadcrumb" class="mb-3">
+    <ol class="breadcrumb">
+      <li class="breadcrumb-item"><a href="/">首页</a></li>
+      <li class="breadcrumb-item"><a href="{{ url_for('workshop.home') }}">工坊</a></li>
+      <li class="breadcrumb-item active">创作</li>
+    </ol>
+  </nav>
   <div class="card">
     <div class="card-header">
       <h4>工坊创作</h4>
@@ -40,12 +47,64 @@
           <div class="mt-2">
             <div class="form-label">拖拽上传文件（可选）</div>
             {% if dropzone %}
-            <div id="dropzone-area">{{ dropzone.create(action=url_for('main.upload_file'), input_name='file', multiple=False) }}</div>
+            <div id="dropzone-area">{{ dropzone.create(action=url_for('workshop.upload_file'), input_name='file', multiple=False) }}</div>
             {% endif %}
             <div class="form-text">可拖拽上传，支持与上方选择框共用。</div>
           </div>
         </div>
-        <button type="button" class="btn btn-primary" id="save-btn">保存草稿</button>
+        <div class="d-flex justify-content-between align-items-center mt-4">
+          <button type="button" class="btn btn-primary" id="save-btn">保存草稿</button>
+          <div class="ml-auto d-flex align-items-center">
+            <button type="button" class="btn btn-success me-2" id="publish-btn" disabled>发布</button>
+            <span id="publish-hint" class="small" style="color: #212529;">发布前请先填写标题和正文并保存草稿</span>
+          </div>
+        </div>
+      <!-- 发布设置Modal -->
+      <div class="modal fade" id="publishModal" tabindex="-1" aria-labelledby="publishModalLabel" aria-hidden="true">
+        <div class="modal-dialog">
+          <div class="modal-content">
+            <div class="modal-header" style="color: #212529;">
+              <h5 class="modal-title" id="publishModalLabel" style="color: #212529;">发布作品设置</h5>
+              <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="关闭"></button>
+            </div>
+            <div class="modal-body" style="color: #212529;">
+              <form id="publish-form">
+                <div class="mb-3">
+                  <label class="form-label">发布类型</label><br>
+                  <div class="form-check form-check-inline">
+                    <input class="form-check-input" type="radio" name="pub_type" id="pub_type_personal" value="personal" checked>
+                    <label class="form-check-label" for="pub_type_personal">个人</label>
+                  </div>
+                  <div class="form-check form-check-inline">
+                    <input class="form-check-input" type="radio" name="pub_type" id="pub_type_collab" value="collab">
+                    <label class="form-check-label" for="pub_type_collab">协作</label>
+                  </div>
+                </div>
+                <div class="mb-3">
+                  <label class="form-label">作品主题</label>
+                  <select class="form-select" id="pub-theme" name="pub_theme">
+                    <option value="社会">社会</option>
+                    <option value="情感">情感</option>
+                    <option value="奇幻">奇幻</option>
+                    <option value="科幻">科幻</option>
+                    <option value="抽象">抽象</option>
+                    <option value="custom">自定义</option>
+                  </select>
+                  <input type="text" class="form-control mt-2 d-none" id="custom-theme-input" name="custom_theme" placeholder="请输入自定义主题名">
+                </div>
+                <div class="mb-3 form-check">
+                  <input type="checkbox" class="form-check-input" id="agree-protocol" name="agree_protocol">
+                  <label class="form-check-label" for="agree-protocol">我已阅读并同意 <a href="/docs/publish_protocol" target="_blank">平台作品发布协议</a></label>
+                </div>
+              </form>
+            </div>
+            <div class="modal-footer">
+              <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">取消</button>
+              <button type="button" class="btn btn-success" id="modal-publish-btn" disabled>发布</button>
+            </div>
+          </div>
+        </div>
+      </div>
       </form>
       <hr>
       <div id="stats-area" class="mt-3">
@@ -63,6 +122,175 @@
 </div>
 <script src="/static/js/socket.io.min.js?v={{ static_version }}"></script>
 <script src="/static/js/workshop_editor.js?v={{ static_version }}"></script>
+<script>
+// 所有事件绑定和发布逻辑，确保在DOM渲染后执行
+window.addEventListener('DOMContentLoaded', function() {
+      // 每次modal弹窗show时动态绑定发布按钮事件，确保事件生效
+      document.getElementById('publishModal').addEventListener('show.bs.modal', function() {
+        const modalPublishBtn = document.getElementById('modal-publish-btn');
+        // 先解绑所有旧事件
+        modalPublishBtn.onclick = null;
+        modalPublishBtn.onclick = function() {
+          console.log('[modal-publish] 点击modal发布按钮');
+          modalPublishBtn.disabled = true;
+          const pubType = document.querySelector('input[name="pub_type"]:checked').value;
+          const pubTheme = pubThemeSelect.value;
+          const customTheme = customThemeInput.value.trim();
+          // 获取当前草稿id（可通过modal.setRelatedDraftId传递）
+          const draftId = modal.setRelatedDraftId;
+          // 获取CSRF Token
+          const csrfInput = document.querySelector('input[name="csrf_token"]');
+          let csrfToken = csrfInput ? csrfInput.value : '';
+          csrfToken = csrfToken.replace(/^"|"$/g, '');
+          console.log('[modal-publish] 发布参数', {draftId, pubType, pubTheme, customTheme, csrfToken});
+          fetch('/workshop/publish', {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+              'X-CSRFToken': csrfToken
+            },
+            body: JSON.stringify({
+              draft_id: draftId,
+              pub_type: pubType,
+              pub_theme: pubTheme,
+              custom_theme: customTheme
+            }),
+            credentials: 'include'
+          })
+            .then(r => {console.log('[modal-publish] fetch响应', r); return r.json();})
+            .then(res => {
+              modalPublishBtn.disabled = false;
+              console.log('[modal-publish] fetch结果', res);
+              if (res.success && res.work_id) {
+                window.location.href = '/workshop/work/' + res.work_id;
+              } else {
+                alert(res.msg || '发布失败');
+              }
+            })
+            .catch((e) => {
+              modalPublishBtn.disabled = false;
+              console.error('[modal-publish] fetch异常', e);
+              alert('网络异常，发布失败');
+            });
+        };
+      });
+    console.log('[modal-publish] 尝试获取 modalPublishBtn:', document.getElementById('modal-publish-btn'));
+  // 发布按钮逻辑
+  const publishBtn = document.getElementById('publish-btn');
+  const saveBtn = document.getElementById('save-btn');
+  const modal = new bootstrap.Modal(document.getElementById('publishModal'));
+  const modalPublishBtn = document.getElementById('modal-publish-btn');
+  const pubThemeSelect = document.getElementById('pub-theme');
+  const customThemeInput = document.getElementById('custom-theme-input');
+  const agreeProtocol = document.getElementById('agree-protocol');
+
+  // 主题选择联动
+  pubThemeSelect.addEventListener('change', function() {
+    if (this.value === 'custom') {
+      customThemeInput.classList.remove('d-none');
+      customThemeInput.required = true;
+    } else {
+      customThemeInput.classList.add('d-none');
+      customThemeInput.required = false;
+    }
+  });
+
+  // 协议勾选、主题输入等控制发布按钮可用性
+  function checkModalPublishEnable() {
+    let enable = agreeProtocol.checked;
+    if (pubThemeSelect.value === 'custom') {
+      enable = enable && !!customThemeInput.value.trim();
+    }
+    modalPublishBtn.disabled = !enable;
+  }
+  agreeProtocol.addEventListener('change', checkModalPublishEnable);
+  customThemeInput.addEventListener('input', checkModalPublishEnable);
+  pubThemeSelect.addEventListener('change', checkModalPublishEnable);
+
+  // 发布按钮点击：直接保存草稿并弹出Modal
+  publishBtn.onclick = function() {
+    // 仅弹出modal，不再自动保存草稿
+    const draftId = document.getElementById('workshop-form').dataset.draftId;
+    if (draftId) {
+      modal.setRelatedDraftId = draftId;
+      modal.show();
+    } else {
+      alert('请先保存草稿后再发布！');
+    }
+  };
+  // 检查发布按钮可用性
+  window.checkPublishEnable = function() {
+    const form = document.getElementById('workshop-form');
+    const title = form.title.value.trim();
+    const content = form.content.value.trim();
+    const draftId = form.dataset.draftId;
+    const publishBtn = document.getElementById('publish-btn');
+    const hint = document.getElementById('publish-hint');
+    if (title && content && draftId) {
+      publishBtn.disabled = false;
+      hint.style.display = 'none';
+    } else {
+      publishBtn.disabled = true;
+      hint.style.display = '';
+    }
+  }
+  document.getElementById('title').addEventListener('input', window.checkPublishEnable);
+  document.getElementById('content').addEventListener('input', window.checkPublishEnable);
+  document.getElementById('save-btn').addEventListener('click', function() {
+    setTimeout(window.checkPublishEnable, 500); // 保存草稿后异步检查
+  });
+  window.checkPublishEnable();
+});
+
+// 发布Modal点击“发布”按钮
+  modalPublishBtn.onclick = function() {
+    console.log('[modal-publish] 点击modal发布按钮');
+    modalPublishBtn.disabled = true;
+    const pubType = document.querySelector('input[name="pub_type"]:checked').value;
+    const pubTheme = pubThemeSelect.value;
+    const customTheme = customThemeInput.value.trim();
+    // 获取当前草稿id（可通过modal.setRelatedDraftId传递）
+    const draftId = modal.setRelatedDraftId;
+    console.log('[modal-publish] 发布参数', {draftId, pubType, pubTheme, customTheme});
+    fetch('/workshop/publish', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        draft_id: draftId,
+        pub_type: pubType,
+        pub_theme: pubTheme,
+        custom_theme: customTheme
+      }),
+      credentials: 'include'
+    })
+      .then(r => {console.log('[modal-publish] fetch响应', r); return r.json();})
+      .then(res => {
+        modalPublishBtn.disabled = false;
+        console.log('[modal-publish] fetch结果', res);
+        if (res.success && res.work_id) {
+          window.location.href = '/workshop/work/' + res.work_id;
+        } else {
+          alert(res.msg || '发布失败');
+        }
+      })
+      .catch((e) => {
+        modalPublishBtn.disabled = false;
+        console.error('[modal-publish] fetch异常', e);
+        alert('网络异常，发布失败');
+      });
+  };
+
+// 修改保存草稿回调，支持发布流程（传递draftId）
+const origSaveDraftWithSocketReady = window.saveDraftWithSocketReady;
+window.saveDraftWithSocketReady = function(form, callback, roomName) {
+  origSaveDraftWithSocketReady(form, function(success, draftId) {
+    if (window._onDraftSavedForPublish) {
+      window._onDraftSavedForPublish(success, draftId);
+    }
+    if (typeof callback === 'function') callback(success, draftId);
+  }, roomName);
+};
+</script>
 <script>
 // 简单切换编辑/上传区
 const modeRadios = document.getElementsByName('mode');
