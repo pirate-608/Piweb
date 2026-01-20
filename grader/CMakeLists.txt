@@ -18,3 +18,11 @@ set_target_properties(grading PROPERTIES
 	LIBRARY_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/grader
 	OUTPUT_NAME "grading"
 )
+
+# 构建后自动拷贝 questions.txt 到可执行文件同级目录
+add_custom_command(TARGET auto_grader_cli POST_BUILD
+	COMMAND ${CMAKE_COMMAND} -E copy_if_different
+		${CMAKE_SOURCE_DIR}/grader/questions.txt
+		$<TARGET_FILE_DIR:auto_grader_cli>/questions.txt
+	COMMENT "Copying questions.txt to output directory"
+)

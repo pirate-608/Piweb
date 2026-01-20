@@ -1,6 +1,13 @@
 {% extends "base.html" %}
 
 {% block content %}
+<nav aria-label="breadcrumb">
+  <ol class="breadcrumb bg-white px-0 mb-4">
+    <li class="breadcrumb-item"><a href="{{ url_for('main.index') }}">首页</a></li>
+    <li class="breadcrumb-item"><a href="{{ url_for('exam.start_exam') }}">答题中心</a></li>
+    <li class="breadcrumb-item active" aria-current="page">历史记录</li>
+  </ol>
+</nav>
 <div class="row mb-4 align-items-center">
     <div class="col-md-6">
         <h2>历史作答记录</h2>

@@ -1,6 +1,14 @@
 {% extends "base.html" %}
 
 {% block content %}
+<nav aria-label="breadcrumb">
+  <ol class="breadcrumb bg-white px-0 mb-4">
+    <li class="breadcrumb-item"><a href="{{ url_for('main.index') }}">首页</a></li>
+    <li class="breadcrumb-item"><a href="{{ url_for('exam.start_exam') }}">答题中心</a></li>
+    <li class="breadcrumb-item active" aria-current="page">添加题目</li>
+  </ol>
+</nav>
+
 <h2 class="mb-4">批量添加题目</h2>
 <form method="POST" action="{{ url_for('admin_bp.add') }}" id="addForm" enctype="multipart/form-data">
     <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>

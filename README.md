@@ -120,7 +120,11 @@ cd build/text_analyzer
     在项目根目录下打开终端，运行：
     ```powershell
 
-    docker-compose up -d --build #构建并启动所有服务
+    docker-compose up -d --build #构建并启动所有服务（通用）
+
+    docker-compose --env-file .env.dev up -d --build #开发环境
+
+    docker-compose --env-file .env.prod up -d #生产环境
     
     docker-compose up #仅启动不构建
 

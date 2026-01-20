@@ -315,6 +315,14 @@ window.addEventListener('DOMContentLoaded', function() {
       // ...existing code...
     });
   });
+  
+  // 禁止标题栏回车触发表单提交，避免跳转错误页面
+  document.getElementById('title').addEventListener('keydown', function(e) {
+    if (e.key === 'Enter') {
+      e.preventDefault();
+      this.blur();
+    }
+  });
 });
 
 // ========== 保存草稿函数 ==========

@@ -24,6 +24,7 @@ class WorkshopWork(db.Model):
     likes = db.Column(db.Integer, default=0)  # 点赞数
     is_collab = db.Column(db.Boolean, default=False)  # 是否协作作品
     hotness = db.Column(db.Float, default=0.0, index=True)  # 热度分数
+    hotness_milestone = db.Column(db.Integer, default=0)  # 已达成的最高热度档位（如0、1、2...）
     user = db.relationship('User', foreign_keys=[user_id], backref=db.backref('workshop_works', lazy=True))
     # 协作编辑锁
     edit_lock_user_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=True)
@@ -245,3 +246,50 @@ class TopicView(db.Model):
     topic_id = db.Column(db.Integer, db.ForeignKey('topic.id'), primary_key=True)
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
 
+class WorkshopWorkLike(db.Model):
+    __tablename__ = 'workshop_work_like'
+    id = db.Column(db.Integer, primary_key=True)
+    user_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False)
+    work_id = db.Column(db.Integer, db.ForeignKey('workshop_work.id'), nullable=False)
+    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+    __table_args__ = (db.UniqueConstraint('user_id', 'work_id', name='uniq_user_work_like'),)
+
+
+    user_id = db.Column(db.Integer, db.ForeignKey('user.id'), primary_key=True)
+    work_id = db.Column(db.Integer, db.ForeignKey('workshop_work.id'), primary_key=True)
+    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+
+# --- 参数初始化工具函数 ---
+def init_workshop_system_settings():
+    """
+    自动补全工坊相关参数到 SystemSetting 表。
+    可在 Flask shell 执行：from web.models import init_workshop_system_settings; init_workshop_system_settings()
+    """
+    from web.extensions import db
+    from web.models import SystemSetting
+    import json
+    default_settings = [
+        {
+            'key': 'workshop_hotness_weights',
+            'value': json.dumps({'w1': 0.2, 'w2': 1.2, 'g': 1.5}, ensure_ascii=False),
+            'desc': '工坊热度权重参数'
+        },
+        {
+            'key': 'workshop_hotness_milestones',
+            'value': json.dumps([10, 30, 60, 120, 240, 480, 960, 1920], ensure_ascii=False),
+            'desc': '工坊热度里程碑档位'
+        },
+        {
+            'key': 'workshop_hotness_reward_formula',
+            'value': json.dumps({'base': 10, 'factor': 1.5}, ensure_ascii=False),
+            'desc': '工坊热度奖励算法参数'
+        },
+    ]
+    for item in default_settings:
+        setting = SystemSetting.query.get(item['key'])
+        if not setting:
+            setting = SystemSetting(key=item['key'], value=item['value'])
+            db.session.add(setting)
+        elif not setting.value:
+            setting.value = item['value']
+    db.session.commit()

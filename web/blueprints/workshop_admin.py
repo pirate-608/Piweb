@@ -147,11 +147,39 @@ def update_hotness_config():
 @login_required
 @admin_required
 def update_hotness():
+    from web.models import User, StardustHistory
     works = WorkshopWork.query.all()
     weights = get_hotness_weights()
+    # 热度档位设置（等比递增）
+    hotness_levels = [10, 30, 60, 120, 240, 480, 960, 1920]
+    alpha = 0.5  # 奖励系数
+    beta = 10    # 最低奖励
+    user_count = User.query.count() or 1
+    import math
     count = 0
     for w in works:
+        old_hotness = w.hotness
         w.hotness = calculate_work_hotness(w, weights)
+        # 检查是否跨越新档位
+        milestone = w.hotness_milestone or 0
+        next_level = milestone
+        while next_level < len(hotness_levels) and w.hotness >= hotness_levels[next_level]:
+            next_level += 1
+        if next_level > milestone and w.user_id:
+            # 依次发放每个新达成档位的奖励
+            for i in range(milestone, next_level):
+                H = hotness_levels[i]
+                S = max(int(alpha * H * math.log2(user_count + 1)), beta)
+                user = User.query.get(w.user_id)
+                if user:
+                    user.stardust = (user.stardust or 0) + S
+                    db.session.add(StardustHistory(
+                        user_id=user.id,
+                        category='workshop',
+                        amount=S,
+                        reason='workshop_hotness_milestone'
+                    ))
+            w.hotness_milestone = next_level
         count += 1
     db.session.commit()
-    return jsonify(success=True, msg=f'已更新{count}个作品热度')
+    return jsonify(success=True, msg=f'已更新{count}个作品热度并发放奖励')

@@ -7,7 +7,7 @@ document.addEventListener('DOMContentLoaded', function () {
   const worksTab = document.getElementById('worksTab');
 
   let currentPage = 1;
-  let currentSort = 'latest';
+  let currentSort = 'latest'; // 仅支持'latest'和'hot'
 
   let isLoading = false;
   let hasMore = true;
@@ -85,13 +85,14 @@ document.addEventListener('DOMContentLoaded', function () {
           <div class="card-footer d-flex justify-content-between align-items-center small bg-white border-0 rounded-bottom-4">
             <span>
               <i class="bi bi-eye text-primary"></i> <span class="me-2">${w.views}</span>
-              <i class="bi bi-heart text-danger"></i> <span>${w.likes}</span>
+              <i class="bi bi-heart text-danger" style="cursor:default;"></i> <span class="work-likes" data-id="${w.id}">${w.likes}</span>
             </span>
             <a href="/workshop/work/${w.id}" class="stretched-link">详情</a>
           </div>
         </div>
       `;
       worksGrid.appendChild(card);
+      // 卡片区点赞仅显示，不可点击
     }
   }
 
@@ -131,13 +132,38 @@ document.addEventListener('DOMContentLoaded', function () {
           <div class="card-footer d-flex justify-content-between align-items-center small bg-white border-0 rounded-bottom-4">
             <span>
               <i class="bi bi-eye text-primary"></i> <span class="me-2">${w.views}</span>
-              <i class="bi bi-heart text-danger"></i> <span>${w.likes}</span>
+              <i class="bi bi-heart text-danger" style="cursor:default;"></i> <span>${w.likes}</span>
             </span>
             <a href="/workshop/work/${w.id}" class="stretched-link">详情</a>
           </div>
         </div>
       `;
       worksGrid.appendChild(card);
+      // 点赞按钮事件绑定
+      card.querySelectorAll('.work-like-btn').forEach(function(btn){
+        btn.onclick = function(e){
+          e.stopPropagation();
+          const workId = btn.getAttribute('data-id');
+          fetch(`/workshop/api/like`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ work_id: workId }),
+            credentials: 'include'
+          })
+          .then(r => r.json())
+          .then(res => {
+            if(res.success && typeof res.likes === 'number'){
+              const likesSpan = card.querySelector('.work-likes[data-id="'+workId+'"]');
+              if(likesSpan) likesSpan.textContent = res.likes;
+              btn.classList.add('bi-heart-fill');
+              btn.classList.remove('bi-heart');
+            }else{
+              alert(res.msg || '点赞失败');
+            }
+          })
+          .catch(()=>{ alert('网络异常，点赞失败'); });
+        };
+      });
     }
   }
 
@@ -184,9 +210,12 @@ document.addEventListener('DOMContentLoaded', function () {
       e.preventDefault();
       worksTab.querySelectorAll('.nav-link').forEach(t => t.classList.remove('active'));
       this.classList.add('active');
-      currentSort = this.dataset.sort;
-      currentPage = 1;
-      fetchWorks(currentPage);
+      // 只允许latest/hot
+      if (this.dataset.sort === 'latest' || this.dataset.sort === 'hot') {
+        currentSort = this.dataset.sort;
+        currentPage = 1;
+        fetchWorks(currentPage);
+      }
     });
   });
 

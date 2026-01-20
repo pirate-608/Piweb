@@ -1,3 +1,5 @@
+# 点赞记录模型（如未定义请在 models.py 补充）
+from web.models import WorkshopWorkLike
 from web.tasks import save_draft_task
 from web.extensions import csrf
 from flask import Blueprint, current_app, abort, render_template, request, jsonify, redirect, url_for, flash, Response
@@ -52,8 +54,12 @@ def api_draft():
         # 保持原有推送机制，参数顺序不变，work_id作为kwargs传递
         task = save_draft_task.apply_async(args=[current_user.id, title, content, description, draft_type], kwargs={'work_id': work_id})
         return jsonify(success=True, msg='草稿保存中', data={'task_id': task.id, 'draft_id': draft_id})
-    # GET: 查询当前用户所有草稿
-    drafts = WorkshopDraft.query.filter_by(user_id=current_user.id).order_by(WorkshopDraft.updated_at.desc()).all()
+    # GET: 查询当前用户当前作品的草稿（如有work_id参数）
+    work_id = request.args.get('work_id')
+    query = WorkshopDraft.query.filter_by(user_id=current_user.id)
+    if work_id:
+        query = query.filter_by(work_id=work_id)
+    drafts = query.order_by(WorkshopDraft.updated_at.desc()).all()
     draft_list = [
         {
             'id': d.id,
@@ -485,8 +491,6 @@ def api_works():
         sort = request.args.get('sort', 'latest')
         if sort == 'hot':
             query = query.order_by(WorkshopWork.views.desc())
-        elif sort == 'likes':
-            query = query.order_by(WorkshopWork.likes.desc())
         else:
             query = query.order_by(WorkshopWork.created_at.desc())
         # 分页查询
@@ -539,8 +543,16 @@ def work_detail(work_id: int):
     try:
         from web.utils.render_utils import render_content
         work = WorkshopWork.query.get_or_404(work_id)
-        # 增加浏览次数
-        if hasattr(work, 'views'):
+        # 增加浏览次数（同一用户只计一次）
+        from web.models import WorkshopWorkView
+        if current_user.is_authenticated:
+            view_record = WorkshopWorkView.query.filter_by(user_id=current_user.id, work_id=work.id).first()
+            if not view_record:
+                db.session.add(WorkshopWorkView(user_id=current_user.id, work_id=work.id))
+                work.views = (work.views or 0) + 1
+                db.session.commit()
+        else:
+            # 未登录用户每次都计入
             work.views = (work.views or 0) + 1
             db.session.commit()
         # 判断内容类型，若以markdown为主（可后续扩展work.mode字段），此处默认markdown
@@ -548,9 +560,13 @@ def work_detail(work_id: int):
         # 生成目录（简单基于markdown标题，后续可扩展更复杂目录生成）
         import re
         toc = []
+        from html import unescape
+        def strip_tags(html):
+            return re.sub(r'<[^>]+>', '', html)
         for match in re.finditer(r'<h([1-6])>(.*?)</h\1>', content_html):
             level = int(match.group(1))
-            text = match.group(2)
+            text_html = match.group(2)
+            text = strip_tags(unescape(text_html))
             anchor = re.sub(r'[^\w\u4e00-\u9fa5]+', '-', text).strip('-').lower()
             toc.append({'level': level, 'text': text, 'anchor': anchor})
         # 为标题加锚点
@@ -639,12 +655,40 @@ def publish():
             draft.updated_at = datetime.utcnow()
         
         db.session.commit()
-        
+
+        # ====== 星尘奖励逻辑 ======
+        from web.models import StardustHistory, User, WorkshopWork
+        user = User.query.get(current_user.id)
+        # 统计用户已发布作品总数（不含协作）
+        total_works = WorkshopWork.query.filter_by(user_id=current_user.id).count()
+        reward = 0
+        reason = None
+        if total_works == 1:
+            reward = 20
+            reason = 'workshop_publish_first'
+        else:
+            # 判断是否达到5,10,20,40...等2的幂且>=5
+            n = total_works
+            is_milestone = n >= 5 and (n & (n - 1)) == 0
+            if is_milestone:
+                reward = n * 10
+                reason = 'workshop_publish_milestone'
+        if reward > 0 and user:
+            user.stardust = (user.stardust or 0) + reward
+            db.session.add(StardustHistory(
+                user_id=user.id,
+                category='workshop',
+                amount=reward,
+                reason=reason
+            ))
+            db.session.commit()
+
         return jsonify({
             'success': True, 
             'msg': '发布成功', 
             'work_id': work.id,
-            'work_title': work.title
+            'work_title': work.title,
+            'stardust_reward': reward
         })
     except Exception as e:
         current_app.logger.error(f"发布作品失败: {str(e)}")
@@ -757,6 +801,36 @@ def my_works():
             'per_page': per_page
         }
     })
+    
+@workshop_bp.route('/api/like', methods=['POST'])
+@csrf.exempt
+@login_required
+def api_like():
+    data = request.get_json(silent=True) or {}
+    work_id = data.get('work_id')
+    action = data.get('action', 'like')
+    if not work_id:
+        return jsonify(success=False, msg='缺少作品ID')
+    work = WorkshopWork.query.get(work_id)
+    if not work:
+        return jsonify(success=False, msg='作品不存在')
+    like_record = WorkshopWorkLike.query.filter_by(user_id=current_user.id, work_id=work_id).first()
+    if action == 'unlike':
+        if like_record:
+            db.session.delete(like_record)
+            work.likes = max((work.likes or 1) - 1, 0)
+            db.session.commit()
+            return jsonify(success=True, like_count=work.likes, liked=False)
+        else:
+            return jsonify(success=False, msg='尚未点赞', like_count=work.likes, liked=False)
+    else:
+        if like_record:
+            return jsonify(success=True, like_count=work.likes, liked=True)
+        like_record = WorkshopWorkLike(user_id=current_user.id, work_id=work_id)
+        work.likes = (work.likes or 0) + 1
+        db.session.add(like_record)
+        db.session.commit()
+        return jsonify(success=True, like_count=work.likes, liked=True)
 
 # 静态页面路由
 @workshop_bp.route('/')

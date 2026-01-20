@@ -2,6 +2,15 @@
 
 {% block content %}
 <div class="container py-5">
+    <!-- 面包屑导航 -->
+    <nav aria-label="breadcrumb">
+      <ol class="breadcrumb bg-white px-0 mb-4">
+        <li class="breadcrumb-item"><a href="{{ url_for('main.index') }}">首页</a></li>
+        <li class="breadcrumb-item"><a href="{{ url_for('exam.start_exam') }}">答题中心</a></li>
+        <li class="breadcrumb-item active" aria-current="page">选择题目集</li>
+      </ol>
+    </nav>
+
     <div class="text-center mb-5">
         <h1 class="display-5 fw-bold">选择题目集</h1>
         <p class="lead text-muted">请选择您要参加的答题科目或类别</p>

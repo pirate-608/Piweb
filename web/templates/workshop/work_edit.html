@@ -2,6 +2,14 @@
 {% block title %}作品编辑{% endblock %}
 {% block content %}
 <div class="container mt-4">
+  <!-- 分层级面包屑导航 -->
+  <nav aria-label="breadcrumb">
+    <ol class="breadcrumb">
+      <li class="breadcrumb-item"><a href="/workshop">工坊首页</a></li>
+      <li class="breadcrumb-item"><a href="/workshop/my_works">我的作品</a></li>
+      <li class="breadcrumb-item active" aria-current="page">编辑作品</li>
+    </ol>
+  </nav>
   <h2>编辑作品</h2>
   <form id="work-form">
     <input type="hidden" id="work-id" name="id" value="{{ work_id }}">

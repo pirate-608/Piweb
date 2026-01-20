@@ -3,7 +3,7 @@ from flask_admin.contrib.sqla import ModelView
 from flask import redirect, url_for, request
 from flask_login import current_user
 from web.extensions import db
-from web.models import User, WorkshopWork
+from web.models import User, WorkshopWork, SystemSetting
 class WorkshopWorkAdminView(ModelView):
     column_list = ('id', 'title', 'user_id', 'pub_type', 'theme', 'created_at', 'is_collab', 'views', 'likes')
     form_columns = ('title', 'user_id', 'pub_type', 'theme', 'description', 'content', 'is_collab')
@@ -36,4 +36,5 @@ def init_admin(app):
     admin = Admin(app, name='NWW管理后台', url='/adminx')
     admin.add_view(AdminUserView(User, db.session, name='用户管理'))
     admin.add_view(WorkshopWorkAdminView(WorkshopWork, db.session, name='工坊作品管理'))
+    admin.add_view(ModelView(SystemSetting, db.session, name='系统参数管理'))
     return admin

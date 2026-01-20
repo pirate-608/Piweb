@@ -1,4 +1,7 @@
 {% extends 'base.html' %}
+{% if csrf_token %}
+<meta name="csrf-token" content="{{ csrf_token() }}">
+{% endif %}
 {% block title %}{{ work.title }} - 工坊作品{% endblock %}
 {% block content %}
 <div class="container mt-4">
@@ -6,6 +9,7 @@
     <ol class="breadcrumb">
       <li class="breadcrumb-item"><a href="/">首页</a></li>
       <li class="breadcrumb-item"><a href="{{ url_for('workshop.home') }}">工坊</a></li>
+      <li class="breadcrumb-item"><a href="{{ url_for('workshop.discover') }}">发现</a></li>
       <li class="breadcrumb-item active">作品详情</li>
     </ol>
   </nav>
@@ -17,6 +21,13 @@
   <div class="row">
     <div class="col-lg-9 col-12">
       <h2>{{ work.title }}</h2>
+      <div class="d-flex align-items-center mb-2">
+        <button id="likeBtn" class="btn btn-outline-danger btn-sm me-2">
+          <i class="bi bi-heart{% if liked %}-fill{% endif %}"></i>
+          <span id="likeCount">{{ work.like_count }}</span>
+        </button>
+        <span class="text-muted small">点赞</span>
+      </div>
       <div class="text-muted mb-2">作者：{{ work.user.username }} | 类型：{{ '协作' if work.pub_type=='collab' else '个人' }} | 主题：{{ work.theme }} | 发布时间：{{ work.created_at.strftime('%Y-%m-%d %H:%M') }}</div>
       <div class="mb-3">{{ work.description }}</div>
       <hr>
@@ -33,7 +44,7 @@
           <ul class="list-unstyled ms-1">
             {% for item in toc %}
               <li style="margin-left: {{ (item.level-1)*16 }}px;">
-                <strong><a href="#{{ item.anchor }}">{{ item.text }}</a></strong>
+                <a href="#{{ item.anchor }}">{{ item.text }}</a>
               </li>
             {% endfor %}
           </ul>
@@ -57,6 +68,51 @@ document.addEventListener('DOMContentLoaded', function() {
       }
     });
   });
+
+  // 详情页点赞按钮逻辑
+  function getCsrfToken() {
+    // 优先从meta标签获取
+    var meta = document.querySelector('meta[name="csrf-token"]');
+    if(meta) return meta.getAttribute('content');
+    // 其次从cookie获取
+    var m = document.cookie.match(/csrf_token=([^;]+)/);
+    return m ? m[1] : '';
+  }
+
+  var likeBtn = document.getElementById('likeBtn');
+  var liked = {{ 'true' if liked else 'false' }};
+  if(likeBtn){
+    likeBtn.addEventListener('click', function(){
+      fetch('/workshop/api/like', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'X-CSRFToken': getCsrfToken()
+        },
+        body: JSON.stringify({work_id: "{{ work.id }}", action: liked ? "unlike" : "like"}),
+        credentials: 'include'
+      })
+      .then(res => res.json())
+      .then(data => {
+        if(data.success && typeof data.like_count === 'number'){
+          document.getElementById('likeCount').textContent = data.like_count;
+          var icon = likeBtn.querySelector('i');
+          if(liked){
+            likeBtn.classList.remove('btn-danger');
+            likeBtn.classList.add('btn-outline-danger');
+            icon.classList.remove('bi-heart-fill');
+            icon.classList.add('bi-heart');
+          }else{
+            likeBtn.classList.remove('btn-outline-danger');
+            likeBtn.classList.add('btn-danger');
+            icon.classList.remove('bi-heart');
+            icon.classList.add('bi-heart-fill');
+          }
+          liked = !liked;
+        }
+      })
+    });
+  }
 });
 </script>
 {% endblock %}

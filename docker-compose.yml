@@ -1,31 +1,33 @@
 version: '3.8'
 services:
   web:
-    build: .
+    image: nww_web:${IMAGE_TAG}
+    # 开发环境下可用 build，生产环境只用 image
+    build:
+      context: .
     ports:
-      - "18080:8080"
+      - "${WEB_PORT}:8080"
     environment:
-      - LOCAL_DEV=1
-      - DATABASE_URL=postgresql://postgres:postgres@db:5432/grading_system
-      - REDIS_HOST=redis
-      - REDIS_PORT=6379
-      - REDIS_DB=0
-      - CELERY_BROKER_URL=redis://redis:6379/0
-      - CELERY_RESULT_BACKEND=redis://redis:6379/0
-      - SOCKETIO_REDIS_URL=redis://redis:6379/0
+      - ENV=${ENV}
+      - DOMAIN=${DOMAIN}
+      - DATABASE_URL=${DATABASE_URL}
+      - REDIS_HOST=${REDIS_HOST}
+      - REDIS_PORT=${REDIS_PORT}
+      - REDIS_DB=${REDIS_DB}
+      - CELERY_BROKER_URL=${CELERY_BROKER_URL}
+      - CELERY_RESULT_BACKEND=${CELERY_RESULT_BACKEND}
+      - SOCKETIO_REDIS_URL=${SOCKETIO_REDIS_URL}
+      - C_FORCE_ROOT=${C_FORCE_ROOT}
+      - PYTHONPATH=${PYTHONPATH}
+      - PYTHONUNBUFFERED=${PYTHONUNBUFFERED}
     depends_on:
       - db
       - redis
     volumes:
-      # Mount source code for hot reloading
       - ./web:/app/web
       - ./celery_worker.py:/app/celery_worker.py
-      # Mount questions.txt so updates persist to host
-      - ./questions.txt:/app/questions.txt
-      # Mount uploads directory for images
+      - ./grader/questions.txt:/app/questions.txt
       - ./web/static/uploads:/app/web/static/uploads
-      # (已移除) Mount C build output for grading
-      # 挂载停用词/词典目录，确保C端/服务端都能访问
       - ./text_analyzer/dict:/app/dict:ro
 
 
@@ -37,20 +39,22 @@ services:
     # 生产环境推荐标准 celery worker 启动命令
     command: ["celery", "-A", "web.celery_worker.celery", "worker", "--loglevel=info", "-P", "eventlet", "--concurrency=8"]
     environment:
-      - DATABASE_URL=postgresql://postgres:postgres@db:5432/grading_system
-      - REDIS_HOST=redis
-      - REDIS_PORT=6379
-      - REDIS_DB=0
-      - CELERY_BROKER_URL=redis://redis:6379/0
-      - CELERY_RESULT_BACKEND=redis://redis:6379/0
-      - SOCKETIO_REDIS_URL=redis://redis:6379/0
-      - C_FORCE_ROOT=true  # Required if running as root in Docker
+      - DATABASE_URL=${DATABASE_URL}
+      - REDIS_HOST=${REDIS_HOST}
+      - REDIS_PORT=${REDIS_PORT}
+      - REDIS_DB=${REDIS_DB}
+      - CELERY_BROKER_URL=${CELERY_BROKER_URL}
+      - CELERY_RESULT_BACKEND=${CELERY_RESULT_BACKEND}
+      - SOCKETIO_REDIS_URL=${SOCKETIO_REDIS_URL}
+      - C_FORCE_ROOT=${C_FORCE_ROOT}
+      - PYTHONPATH=${PYTHONPATH}
+      - PYTHONUNBUFFERED=${PYTHONUNBUFFERED}
     depends_on:
       - db
       - redis
       - web
     volumes:
-      - ./questions.txt:/app/questions.txt
+      - ./grader/questions.txt:/app/questions.txt
       # Mount source code to keep worker in sync
       - ./web:/app/web
       - ./web/celery_worker.py:/app/web/celery_worker.py
@@ -65,11 +69,12 @@ services:
 
   db:
     image: postgres:15-alpine
+    #image: 
     restart: always
     environment:
-      - POSTGRES_USER=postgres
-      - POSTGRES_PASSWORD=postgres
-      - POSTGRES_DB=grading_system
+      - POSTGRES_USER=${POSTGRES_USER}
+      - POSTGRES_PASSWORD=${POSTGRES_PASSWORD}
+      - POSTGRES_DB=${POSTGRES_DB}
     volumes:
       - postgres_data:/var/lib/postgresql/data
     ports:
@@ -87,11 +92,17 @@ services:
       - "443:443"
     volumes:
       - ./nginx/nginx.conf:/etc/nginx/nginx.conf
-      - ./nginx/conf.d/default.conf:/etc/nginx/conf.d/default.conf
+      - ./nginx/conf.d/default.conf.template:/etc/nginx/conf.d/default.conf.template
+      - ./nginx/entrypoint.sh:/entrypoint.sh
       - ./web/static:/web/static
       - ./nginx/ssl:/etc/nginx/ssl
     depends_on:
       - web
+    environment:
+      - DOMAIN=${DOMAIN}
+      - SSL_CERT_PATH=${SSL_CERT_PATH}
+      - SSL_KEY_PATH=${SSL_KEY_PATH}
+    entrypoint: ["/bin/sh", "/entrypoint.sh"]
 
 volumes:
   postgres_data:

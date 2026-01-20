@@ -36,12 +36,8 @@ RUN rm -rf build && \
     -DCMAKE_CXX_COMPILER=g++ \
     && cmake --build build --config Release
 
-# Set environment variables
-ENV PYTHONPATH=/app:/app/web
-ENV PYTHONUNBUFFERED=1
-
 # Expose the port the app runs on
 EXPOSE 8080
 
-# ====== 生产模式（高并发Web） ======
+# ======（高并发Web） ======
 CMD ["sh", "-c", "python web/wait_for_db.py && gunicorn --worker-class eventlet -w 4 --bind 0.0.0.0:8080 web.app:app"]

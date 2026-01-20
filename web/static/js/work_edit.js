@@ -484,5 +484,13 @@ document.addEventListener('DOMContentLoaded', function() {
     });
   }
   
+  // 禁止标题栏回车触发表单提交，避免跳转错误页面
+  document.getElementById('title').addEventListener('keydown', function(e) {
+    if (e.key === 'Enter') {
+      e.preventDefault();
+      this.blur();
+    }
+  });
+  
   console.log('[work_edit] 初始化完成');
 });

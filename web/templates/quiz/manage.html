@@ -3,6 +3,15 @@
 {% block content %}
 <h2 class="mb-4">管理题目</h2>
 
+<!-- Breadcrumb Navigation -->
+<nav aria-label="breadcrumb">
+  <ol class="breadcrumb bg-white px-0 mb-4">
+    <li class="breadcrumb-item"><a href="{{ url_for('main.index') }}">首页</a></li>
+    <li class="breadcrumb-item"><a href="{{ url_for('exam.start_exam') }}">答题中心</a></li>
+    <li class="breadcrumb-item active" aria-current="page">管理题目</li>
+  </ol>
+</nav>
+
 <div class="card mb-4">
     <div class="card-body">
         <form method="GET" action="{{ url_for('admin_bp.manage') }}" class="row g-3">
