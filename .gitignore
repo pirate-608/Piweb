@@ -32,8 +32,3 @@ Desktop.ini
 
 # other:
 nww-web-latest.tar
-
-# Environment files
-.env
-.env.dev
-.env.prod
