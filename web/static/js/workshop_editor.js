@@ -617,6 +617,44 @@ document.getElementById('save-btn').onclick = function() {
   }
 };
 
+// ========== AI续写功能 ========== 
+window.aiContinue = function(contentId = 'content', tempId = 'ai-temperature', statusId = 'ai-status') {
+  const prompt = document.getElementById(contentId).value;
+  const temperature = parseFloat(document.getElementById(tempId).value) || 0.7;
+  const status = document.getElementById(statusId);
+  // 获取CSRF Token
+  const csrfInput = document.querySelector('input[name="csrf_token"]');
+  let csrfToken = csrfInput ? csrfInput.value : '';
+  csrfToken = csrfToken.replace(/^"|"$/g, '');
+  status.textContent = 'AI生成中...';
+  fetch('/api/ai/continue', {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      'X-CSRFToken': csrfToken
+    },
+    body: JSON.stringify({ prompt, temperature }),
+    credentials: 'include'
+  })
+    .then(r => r.json())
+    .then(res => {
+      if (res.text) {
+        document.getElementById(contentId).value += res.text;
+        status.textContent = '已插入AI续写内容';
+      } else {
+        status.textContent = res.error || 'AI续写失败';
+      }
+    })
+    .catch(() => { status.textContent = '网络异常'; });
+};
+
+document.addEventListener('DOMContentLoaded', function() {
+  const aiBtn = document.getElementById('ai-continue-btn');
+  if (aiBtn) {
+    aiBtn.onclick = function() { window.aiContinue(); };
+  }
+});
+
 // ========== 页面初始化 ==========
 
 // 页面加载即建立socket连接

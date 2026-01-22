@@ -11,7 +11,7 @@ from sqlalchemy.engine import Engine
 class WorkshopWork(db.Model):
     __tablename__ = 'workshop_work'
     id = db.Column(db.Integer, primary_key=True)
-    user_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False)
+    user_id = db.Column(db.Integer, db.ForeignKey('user.id', name='fk_workshopwork_user_id'), nullable=False)
     title = db.Column(db.String(128), nullable=False)
     description = db.Column(db.Text)
     content = db.Column(db.Text)
@@ -27,7 +27,7 @@ class WorkshopWork(db.Model):
     hotness_milestone = db.Column(db.Integer, default=0)  # 已达成的最高热度档位（如0、1、2...）
     user = db.relationship('User', foreign_keys=[user_id], backref=db.backref('workshop_works', lazy=True))
     # 协作编辑锁
-    edit_lock_user_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=True)
+    edit_lock_user_id = db.Column(db.Integer, db.ForeignKey('user.id', name='fk_workshopwork_editlock_user_id'), nullable=True)
     edit_lock_time = db.Column(db.DateTime, nullable=True)
     edit_lock_user = db.relationship('User', foreign_keys=[edit_lock_user_id], backref='editing_works')
 
@@ -35,8 +35,8 @@ class WorkshopWork(db.Model):
 class WorkshopWorkEditHistory(db.Model):
     __tablename__ = 'workshop_work_edit_history'
     id = db.Column(db.Integer, primary_key=True)
-    work_id = db.Column(db.Integer, db.ForeignKey('workshop_work.id'), nullable=False)
-    user_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=True)
+    work_id = db.Column(db.Integer, db.ForeignKey('workshop_work.id', name='fk_edit_history_work_id'), nullable=False)
+    user_id = db.Column(db.Integer, db.ForeignKey('user.id', name='fk_edit_history_user_id'), nullable=True)
     is_anonymous = db.Column(db.Boolean, default=False)
     edit_time = db.Column(db.DateTime, default=datetime.utcnow)
     old_content = db.Column(db.Text)
@@ -48,8 +48,8 @@ class WorkshopWorkEditHistory(db.Model):
 class WorkshopDraft(db.Model):
     __tablename__ = 'workshop_draft'
     id = db.Column(db.Integer, primary_key=True)
-    user_id = db.Column(db.Integer, db.ForeignKey('user.id'))
-    work_id = db.Column(db.Integer, db.ForeignKey('workshop_work.id'), nullable=True)  # 新增，支持草稿与作品关联
+    user_id = db.Column(db.Integer, db.ForeignKey('user.id', name='fk_draft_user_id'))
+    work_id = db.Column(db.Integer, db.ForeignKey('workshop_work.id', name='fk_draft_work_id'), nullable=True)  # 新增，支持草稿与作品关联
     title = db.Column(db.String(128), nullable=False)
     description = db.Column(db.Text)
     content = db.Column(db.Text)
@@ -61,11 +61,11 @@ class WorkshopDraft(db.Model):
 
 class Post(db.Model):
     id = db.Column(db.Integer, primary_key=True)
-    topic_id = db.Column(db.Integer, db.ForeignKey('topic.id'), nullable=False)
-    user_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False)
+    topic_id = db.Column(db.Integer, db.ForeignKey('topic.id', name='fk_post_topic_id'), nullable=False)
+    user_id = db.Column(db.Integer, db.ForeignKey('user.id', name='fk_post_user_id'), nullable=False)
     content = db.Column(db.Text, nullable=False)
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
-    parent_id = db.Column(db.Integer, db.ForeignKey('post.id'), nullable=True)
+    parent_id = db.Column(db.Integer, db.ForeignKey('post.id', name='fk_post_parent_id'), nullable=True)
     topic = db.relationship('Topic', backref=db.backref('posts', lazy=True, cascade="all, delete-orphan"))
     user = db.relationship('User', backref=db.backref('posts', lazy=True))
     replies = db.relationship('Post', backref=db.backref('parent', remote_side=[id]), lazy=True)
@@ -118,7 +118,7 @@ class User(UserMixin, db.Model):
 
 class StardustHistory(db.Model):
     id = db.Column(db.Integer, primary_key=True)
-    user_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False)
+    user_id = db.Column(db.Integer, db.ForeignKey('user.id', name='fk_stardusthistory_user_id'), nullable=False)
     category = db.Column(db.String(100), nullable=False)
     amount = db.Column(db.Integer, nullable=False)
     reason = db.Column(db.String(50))
@@ -134,7 +134,7 @@ class Question(db.Model):
     category = db.Column(db.String(100), default='默认题集', index=True)
     mode = db.Column(db.String(20), default='html')
     type = db.Column(db.String(20), default='public', index=True)  # public/personal
-    owner_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=True, index=True)  # 个人题目所属用户
+    owner_id = db.Column(db.Integer, db.ForeignKey('user.id', name='fk_question_owner_id'), nullable=True, index=True)  # 个人题目所属用户
     owner = db.relationship('User', backref=db.backref('personal_questions', lazy=True))
     def to_dict(self):
         return {
@@ -151,7 +151,7 @@ class Question(db.Model):
 
 class ExamResult(db.Model):
     id = db.Column(db.String(36), primary_key=True)
-    user_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=True)
+    user_id = db.Column(db.Integer, db.ForeignKey('user.id', name='fk_examresult_user_id'), nullable=True)
     user = db.relationship('User', backref=db.backref('results', lazy=True))
     timestamp = db.Column(db.String(50), default=datetime.now().strftime('%Y-%m-%d %H:%M:%S'))
     total_score = db.Column(db.Integer, default=0)
@@ -179,7 +179,7 @@ class ExamResult(db.Model):
 
 class UserCategoryStat(db.Model):
     id = db.Column(db.Integer, primary_key=True)
-    user_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False)
+    user_id = db.Column(db.Integer, db.ForeignKey('user.id', name='fk_usercategorystat_user_id'), nullable=False)
     category = db.Column(db.String(100), nullable=False)
     total_attempts = db.Column(db.Integer, default=0)
     total_score = db.Column(db.Integer, default=0)
@@ -188,7 +188,7 @@ class UserCategoryStat(db.Model):
 
 class UserPermission(db.Model):
     id = db.Column(db.Integer, primary_key=True)
-    user_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False)
+    user_id = db.Column(db.Integer, db.ForeignKey('user.id', name='fk_userpermission_user_id'), nullable=False)
     category = db.Column(db.String(100), nullable=False)
     user = db.relationship('User', backref=db.backref('permissions', lazy=True))
 
@@ -206,8 +206,8 @@ class Board(db.Model):
 
 class Topic(db.Model):
     id = db.Column(db.Integer, primary_key=True)
-    board_id = db.Column(db.Integer, db.ForeignKey('board.id'), nullable=False)
-    user_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False)
+    board_id = db.Column(db.Integer, db.ForeignKey('board.id', name='fk_topic_board_id'), nullable=False)
+    user_id = db.Column(db.Integer, db.ForeignKey('user.id', name='fk_topic_user_id'), nullable=False)
     title = db.Column(db.String(200), nullable=False)
     content = db.Column(db.Text, nullable=False)
     images_json = db.Column(db.Text, default='[]')
@@ -232,25 +232,25 @@ class Topic(db.Model):
     mode = db.Column(db.String(20), default='html')  # 新增字段，支持渲染模式
 
 class TopicLike(db.Model):
-    user_id = db.Column(db.Integer, db.ForeignKey('user.id'), primary_key=True)
-    topic_id = db.Column(db.Integer, db.ForeignKey('topic.id'), primary_key=True)
+    user_id = db.Column(db.Integer, db.ForeignKey('user.id', name='fk_topiclike_user_id'), primary_key=True)
+    topic_id = db.Column(db.Integer, db.ForeignKey('topic.id', name='fk_topiclike_topic_id'), primary_key=True)
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
 
 class PostLike(db.Model):
-    user_id = db.Column(db.Integer, db.ForeignKey('user.id'), primary_key=True)
-    post_id = db.Column(db.Integer, db.ForeignKey('post.id'), primary_key=True)
+    user_id = db.Column(db.Integer, db.ForeignKey('user.id', name='fk_postlike_user_id'), primary_key=True)
+    post_id = db.Column(db.Integer, db.ForeignKey('post.id', name='fk_postlike_post_id'), primary_key=True)
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
 
 class TopicView(db.Model):
-    user_id = db.Column(db.Integer, db.ForeignKey('user.id'), primary_key=True)
-    topic_id = db.Column(db.Integer, db.ForeignKey('topic.id'), primary_key=True)
+    user_id = db.Column(db.Integer, db.ForeignKey('user.id', name='fk_topicview_user_id'), primary_key=True)
+    topic_id = db.Column(db.Integer, db.ForeignKey('topic.id', name='fk_topicview_topic_id'), primary_key=True)
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
 
 class WorkshopWorkLike(db.Model):
     __tablename__ = 'workshop_work_like'
     id = db.Column(db.Integer, primary_key=True)
-    user_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False)
-    work_id = db.Column(db.Integer, db.ForeignKey('workshop_work.id'), nullable=False)
+    user_id = db.Column(db.Integer, db.ForeignKey('user.id', name='fk_worklike_user_id'), nullable=False)
+    work_id = db.Column(db.Integer, db.ForeignKey('workshop_work.id', name='fk_worklike_work_id'), nullable=False)
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
     __table_args__ = (db.UniqueConstraint('user_id', 'work_id', name='uniq_user_work_like'),)
 

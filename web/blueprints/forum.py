@@ -8,7 +8,7 @@ from flask_login import login_required, current_user
 from werkzeug.utils import secure_filename
 from web.extensions import db
 from web.models import Board, Topic, Post, TopicLike, PostLike, TopicView, SystemSetting
-from config import Config
+from web.config import Config
 import math
 from sqlalchemy import func
 

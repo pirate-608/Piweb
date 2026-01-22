@@ -1,16 +1,7 @@
 # Use an official Python runtime as a parent image
 FROM python:3.11-slim-bookworm
 
-# 递归替换所有 debian.org 相关源为阿里云（支持 http/https，sources.list 及 sources.list.d）
-RUN find /etc/apt/ -name "*.list" -exec sed -i \
-    -e 's@http://deb.debian.org@https://mirrors.aliyun.com@g' \
-    -e 's@https://deb.debian.org@https://mirrors.aliyun.com@g' \
-    -e 's@http://security.debian.org@https://mirrors.aliyun.com@g' \
-    -e 's@https://security.debian.org@https://mirrors.aliyun.com@g' \
-    -e 's@http://deb.debian.net@https://mirrors.aliyun.com@g' \
-    -e 's@https://deb.debian.net@https://mirrors.aliyun.com@g' \
-    {} + \
-    && apt-get update && apt-get install -y \
+RUN apt-get update && apt-get install -y \
     gcc \
     g++ \
     ninja-build \
@@ -26,7 +17,8 @@ COPY CMakeLists.txt ./
 COPY text_analyzer/dict ./text_analyzer/dict
 
 # 安装Python依赖
-COPY web/requirements.txt requirements.txt
+COPY requirements.txt requirements.txt
+RUN pip install --upgrade pip
 RUN pip install --no-cache-dir -r requirements.txt
 
 RUN rm -rf build && \

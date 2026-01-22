@@ -115,32 +115,61 @@ cd build/text_analyzer
 
 ### Web 部署
 
-#### Docker 一键部署（推荐）
-1.  **启动服务**：
+#### Docker 一键部署
+  **启动服务**：
+  **先将.env.dev/.env.prod的内容与.env.key内容合并复制到.env中**
     在项目根目录下打开终端，运行：
     ```powershell
 
-    docker-compose up -d --build #构建并启动所有服务（通用）
+    docker-compose up -d --build #构建并启动所有服务（通用，无环境变量）
 
-    docker-compose --env-file .env.dev up -d --build #开发环境
+    docker-compose --env-file .env up -d --build（开发环境）
 
-    docker-compose --env-file .env.prod up -d #生产环境
-    
-    docker-compose up #仅启动不构建
+    docker-compose --env-file .env up -d #生产环境（启动预加载镜像，适合网络受限环境）
 
-    docker-compose restart web #仅重新启动 web 服务
+    docker-compose --env-file .env restart web #仅重新启动 web 服务（开发环境）
 
-    docker-compose restart web worker #重启 web 和 celery worker 进程
+    docker-compose --env-file .env restart web worker #重启 web 和 celery worker 进程
 
-    docker-compose down  #停止容器进程
+    docker-compose --env-file .env down  #停止容器进程
 
     Warning！You need to be careful using following command!
 
-    docker-compose down -v #删除所有容器和挂载的卷(慎用！会格式化所有数据！)
+    docker-compose down --env-file .env -v #删除所有容器和挂载的卷(慎用！会格式化所有数据！)
 
     ```
-2.  **访问平台**：
-    浏览器打开 http://localhost:18080
+
+#### Shell脚本启动（推荐）
+
+本项目已提供统一的脚本用于安全、便捷地启动、重启和停止各服务，支持开发/生产环境自动合并密钥，数据库启停需单独操作，防止误关。
+
+##### 启动服务
+```bash
+bash scripts/start.sh           # 开发环境
+bash scripts/start.sh prod      # 生产环境
+```
+**访问平台**：
+    浏览器打开 http://localhost:18080[http://localhost:18080]
+
+##### 重启服务（不动数据库）
+```bash
+bash scripts/restart.sh         # 重启开发环境 web/worker/redis/nginx
+bash scripts/restart.sh prod    # 重启生产环境 web/worker/redis/nginx
+```
+##### 停止服务（不动数据库）
+```bash
+bash scripts/stop.sh            # 停止开发环境 web/worker/redis/nginx
+bash scripts/stop.sh prod       # 停止生产环境 web/worker/redis/nginx
+```
+##### 安全停止数据库（需二次确认，独立操作）
+```bash
+bash scripts/stop_db.sh         # 停止开发环境数据库（需输入 YES 确认）
+bash scripts/stop_db.sh prod    # 停止生产环境数据库（需输入 YES 确认）
+```
+- 所有脚本均自动合并 .env.dev/.env.prod 与 .env.key，安全高效。
+- 数据库启停需单独操作，防止误关误删。
+- 如需彻底移除所有容器和卷，请谨慎使用 `docker-compose down -v`。
+
 
 #### 本地开发环境（可选）
 

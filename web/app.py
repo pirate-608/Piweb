@@ -2,7 +2,7 @@ import eventlet
 eventlet.monkey_patch()
 # Flask工厂模式下静态资源版本号自动注入
 import datetime
-from __init__ import create_app, socketio
+from web.__init__ import create_app, socketio
 
 def get_static_version():
 	# 可改为 git hash 或其他自动化方式

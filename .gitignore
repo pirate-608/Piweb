@@ -31,6 +31,12 @@ Desktop.ini
 *.log
 
 # other:
-nww-web-latest.tar
-nww_web_latest.tar
+*.tar
+*.zip
+*.tar.gz
 _recycle_bin/
+
+# environment files
+.env.key
+.env.prod
+.env.dev

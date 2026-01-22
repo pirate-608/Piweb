@@ -55,7 +55,7 @@ class Config:
 
         # Data files (writable) should be in BASE_DIR (next to exe)
         DATA_FILE = os.path.join(BASE_DIR, 'questions.txt')
-        RESULTS_FILE = os.path.join(BASE_DIR, 'results.json')
+        # RESULTS_FILE 已废弃，无需导出
 
         INSTANCE_PATH = os.path.join(BASE_DIR, 'instance')
         if not os.path.exists(INSTANCE_PATH):
@@ -76,7 +76,7 @@ class Config:
         # Data Paths
         DLL_PATH = os.path.join(BASE_DIR, 'build', 'grader', LIB_NAME)
         DATA_FILE = os.path.join(BASE_DIR, 'questions.txt')
-        RESULTS_FILE = os.path.join(BASE_DIR, 'results.json')
+        # RESULTS_FILE 已废弃，无需导出
 
         # Database config
         WEB_DIR = os.path.dirname(os.path.abspath(__file__))

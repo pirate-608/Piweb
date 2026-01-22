@@ -1,9 +1,5 @@
 import os
 import sys
-import eventlet
-
-# Patch for better performance (Web Server only)
-eventlet.monkey_patch()
 
 # Since this file is now in the 'web' directory, and we run it as a script,
 # the 'web' directory is automatically added to sys.path.

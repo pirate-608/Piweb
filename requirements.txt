@@ -25,3 +25,4 @@ Flask-Dropzone
 Flask-Mail
 PyPDF2
 python-docx
+dashscope

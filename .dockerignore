@@ -16,4 +16,10 @@ dist
 .pytest_cache
 *.egg-info
 __recycle_bin/
-nww-web-latest.tar
+*.tar
+*.zip
+*.tar.gz
+_recycle_bin/
+.env.key
+.env.prod
+.env.dev
