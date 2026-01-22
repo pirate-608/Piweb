@@ -37,6 +37,7 @@ Desktop.ini
 _recycle_bin/
 
 # environment files
+.env
 .env.key
 .env.prod
 .env.dev
