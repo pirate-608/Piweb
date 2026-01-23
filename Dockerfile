@@ -31,5 +31,5 @@ RUN rm -rf build && \
 # Expose the port the app runs on
 EXPOSE 8080
 
-# ======（高并发Web） ======
-CMD ["sh", "-c", "python web/wait_for_db.py && gunicorn --worker-class eventlet -w 4 --bind 0.0.0.0:8080 web.app:app"]
+# ======（自动适配入口） ======
+CMD ["sh", "/app/web/docker_entrypoint.sh"]

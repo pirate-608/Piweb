@@ -12,7 +12,6 @@ services:
       - redis
     volumes:
       - ./web:/app/web
-      - ./celery_worker.py:/app/celery_worker.py
       - ./grader/questions.txt:/app/questions.txt
       - ./web/static/uploads:/app/web/static/uploads
       - ./text_analyzer/dict:/app/dict:ro
@@ -28,6 +27,7 @@ services:
       - DASHSCOPE_API_KEY=${DASHSCOPE_API_KEY}
       - SECRET_KEY=${SECRET_KEY}
       - SESSION_TYPE=${SESSION_TYPE}
+      - USE_GEVENT=${USE_GEVENT}
     entrypoint: ["/bin/sh", "/app/web/docker_entrypoint.sh"]
 
 
@@ -39,7 +39,7 @@ services:
     # 开发环境热重载命令（如需自动重启 celery worker，可取消注释并确保已安装 watchdog）
     # command: ["watchmedo", "auto-restart", "--directory=web", "--pattern=*.py", "--recursive", "--", "celery", "-A", "web.celery_worker.celery", "worker", "--loglevel=info"]
     # 生产环境推荐标准 celery worker 启动命令
-    command: ["celery", "-A", "web.celery_worker.celery", "worker", "--loglevel=info", "-P", "eventlet", "--concurrency=8"]
+    command: ["celery", "-A", "web.celery_worker.celery", "worker", "--loglevel=info", "-P", "gevent", "--concurrency=8"]
     depends_on:
       - db
       - redis
@@ -48,7 +48,6 @@ services:
       - ./grader/questions.txt:/app/questions.txt
       # Mount source code to keep worker in sync
       - ./web:/app/web
-      - ./web/celery_worker.py:/app/web/celery_worker.py
       # 挂载停用词/词典目录，确保C端/服务端都能访问
       - ./text_analyzer/dict:/app/dict:ro
     environment:
@@ -63,6 +62,7 @@ services:
       - DASHSCOPE_API_KEY=${DASHSCOPE_API_KEY}
       - SECRET_KEY=${SECRET_KEY}
       - SESSION_TYPE=${SESSION_TYPE}
+      - USE_GEVENT=${USE_GEVENT}
     entrypoint: ["/bin/sh", "/app/web/docker_entrypoint.sh"]
 
   redis:
@@ -103,6 +103,8 @@ services:
       - ${SSL_KEY_PATH_LOCAL}:${SSL_KEY_PATH}
     depends_on:
       - web
+      - redis
+      - db
     environment:
       - DOMAIN=${DOMAIN}
       - SSL_CERT_PATH=${SSL_CERT_PATH}

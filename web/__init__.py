@@ -1,7 +1,9 @@
+import gevent.monkey
+gevent.monkey.patch_all(ssl=True, aggressive=True)
+# ↑ 必须在任何其它 import 之前，彻底规避递归溢出和 gevent/ssl 兼容性问题
 import os
 import sys
 from pathlib import Path
-
 from flask import Flask, redirect, url_for, flash, request, render_template
 import logging
 
@@ -119,7 +121,7 @@ def _initialize_extensions(app):
     socketio.init_app(
         app,
         message_queue=app.config.get('CELERY_BROKER_URL'),
-        async_mode='eventlet',
+        # async_mode 自动检测
         cors_allowed_origins='*',
         ping_timeout=30,
         ping_interval=10,

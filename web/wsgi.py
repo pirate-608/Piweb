@@ -1,9 +1,10 @@
+
+# ---- gevent patch_all 必须最早 ----
+import gevent.monkey
+gevent.monkey.patch_all(ssl=True, aggressive=True)
+
 import os
 import sys
-
-# Since this file is now in the 'web' directory, and we run it as a script,
-# the 'web' directory is automatically added to sys.path.
-# We can import app directly.
 
 from web import create_app
 

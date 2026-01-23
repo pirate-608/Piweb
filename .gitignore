@@ -34,7 +34,8 @@ Desktop.ini
 *.tar
 *.zip
 *.tar.gz
-_recycle_bin/
+__recycle_bin
+mirror/
 
 # environment files
 .env

@@ -13,19 +13,7 @@ db = SQLAlchemy()
 migrate = Migrate()
 login_manager = LoginManager()
 csrf = CSRFProtect()
-SOCKETIO_REDIS_URL = f"redis://{getattr(Config, 'REDIS_HOST', 'redis')}:{getattr(Config, 'REDIS_PORT', 6379)}/0"
-socketio = SocketIO(
-    async_mode='eventlet',
-    cors_allowed_origins='*',
-    message_queue=SOCKETIO_REDIS_URL,
-    ping_timeout=30,
-    ping_interval=10,
-    logger=True,
-    engineio_logger=True,
-    max_http_buffer_size=10 * 1024 * 1024,  # 10MB
-    allow_upgrades=True,
-    cors_allowed_headers='*'
-)
+socketio = SocketIO()
 
 # Flask-Mail
 mail = Mail()

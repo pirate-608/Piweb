@@ -20,13 +20,13 @@
             </div>
             <div class="card-body">
                 <div class="mb-3">
-                    <label class="form-label">题目描述</label>
-                    <textarea class="form-control" name="content[]" rows="3" placeholder="例如：C语言的作者是谁？" required></textarea>
+                    <label class="form-label" for="content-1">题目描述</label>
+                    <textarea class="form-control" id="content-1" name="content[]" rows="3" placeholder="例如：C语言的作者是谁？" required></textarea>
                     <div class="form-text">请不要包含 '|' 符号。支持多行输入。</div>
                 </div>
                 <div class="mb-3">
-                    <label class="form-label">题目图片 (可选)</label>
-                    <input type="file" class="form-control" name="image[]" accept=".jpg,.jpeg,.png,.gif,.webp,.svg,.bmp,.tiff">
+                    <label class="form-label" for="image-1">题目图片 (可选)</label>
+                    <input type="file" class="form-control" id="image-1" name="image[]" accept=".jpg,.jpeg,.png,.gif,.webp,.svg,.bmp,.tiff">
                     <div class="form-text">支持 JPG, PNG, GIF, WebP, SVG, BMP, TIFF 格式。</div>
                     <!-- Dropzone 拖拽上传区（可选） -->
                     <div class="mt-2">
@@ -38,17 +38,17 @@
                     </div>
                 </div>
                 <div class="mb-3">
-                    <label class="form-label">标准答案</label>
-                    <input type="text" class="form-control" name="answer[]" placeholder="例如：Dennis Ritchie; Dennis M. Ritchie" required>
+                    <label class="form-label" for="answer-1">标准答案</label>
+                    <input type="text" class="form-control" id="answer-1" name="answer[]" placeholder="例如：Dennis Ritchie; Dennis M. Ritchie" required>
                     <div class="form-text">支持多个正确答案，请用分号 (;) 或中文分号 (；) 分隔。</div>
                 </div>
                 <div class="mb-3">
-                    <label class="form-label">分值</label>
-                    <input type="number" class="form-control" name="score[]" value="10" required>
+                    <label class="form-label" for="score-1">分值</label>
+                    <input type="number" class="form-control" id="score-1" name="score[]" value="10" required>
                 </div>
                 <div class="mb-3">
-                    <label class="form-label">题目集/分类</label>
-                    <input type="text" class="form-control" name="category[]" list="categoryList" placeholder="例如：C语言基础" value="默认题集">
+                    <label class="form-label" for="category-1">题目集/分类</label>
+                    <input type="text" class="form-control" id="category-1" name="category[]" list="categoryList" placeholder="例如：C语言基础" value="默认题集">
                     <datalist id="categoryList">
                         {% for cat in categories %}
                         <option value="{{ cat }}">
@@ -56,8 +56,8 @@
                     </datalist>
                     </div>
                     <div class="mb-3">
-                        <label class="form-label">题目类型</label>
-                        <select class="form-select" name="type[]">
+                        <label class="form-label" for="type-1">题目类型</label>
+                        <select class="form-select" id="type-1" name="type[]">
                             <option value="public">公共题目</option>
                             <option value="personal">个人题目</option>
                         </select>
@@ -74,8 +74,8 @@
     </div>
 
     <div class="d-grid gap-2 d-md-flex justify-content-md-start">
-        <button type="submit" class="btn btn-primary btn-lg">保存所有题目</button>
-        <a href="/" class="btn btn-secondary btn-lg">取消</a>
+        <button type="submit" class="btn btn-primary btn-lg" id="save-all-btn">保存所有题目</button>
+        <a href="{{ url_for('exam.start_exam') }}" class="btn btn-secondary btn-lg">取消</a>
     </div>
 </form>
 
@@ -85,34 +85,66 @@
         const addBtn = document.getElementById('add-more-btn');
         let questionCount = 1;
 
-        addBtn.addEventListener('click', function() {
-            questionCount++;
-            const template = container.firstElementChild.cloneNode(true);
-            
-            // Update title
-            template.querySelector('.card-header span').textContent = '题目 ' + questionCount;
-            
-            // Clear inputs
-            template.querySelectorAll('input, textarea').forEach(input => {
-                if (input.name === 'score[]') {
-                    input.value = '10';
-                } else {
-                    input.value = '';
-                }
+
+            addBtn.addEventListener('click', function() {
+                console.log('点击添加下一道题目，当前题目数:', questionCount);
+                questionCount++;
+                const template = container.firstElementChild.cloneNode(true);
+
+                // Update title
+                template.querySelector('.card-header span').textContent = '题目 ' + questionCount;
+
+                // Clear inputs & set unique id/for
+                const fields = [
+                    {name: 'content[]', id: 'content-' + questionCount},
+                    {name: 'image[]', id: 'image-' + questionCount},
+                    {name: 'answer[]', id: 'answer-' + questionCount},
+                    {name: 'score[]', id: 'score-' + questionCount},
+                    {name: 'category[]', id: 'category-' + questionCount},
+                    {name: 'type[]', id: 'type-' + questionCount}
+                ];
+                fields.forEach(f => {
+                    // input/select/textarea
+                    let input = template.querySelector(`[name='${f.name}']`);
+                    if (input) {
+                        input.id = f.id;
+                        if (f.name === 'score[]') {
+                            input.value = '10';
+                        } else if (input.tagName === 'SELECT') {
+                            input.selectedIndex = 0;
+                        } else {
+                            input.value = '';
+                        }
+                    }
+                    // label for
+                    let labels = template.querySelectorAll(`label[for]`);
+                    labels.forEach(label => {
+                        if (label.htmlFor.startsWith(f.name.split('[')[0])) {
+                            label.htmlFor = f.id;
+                        }
+                    });
+                });
+
+                // 清空拖拽上传区（如有）
+                const dropzones = template.querySelectorAll('.dropzone');
+                dropzones.forEach(dz => {
+                    dz.innerHTML = '';
+                });
+
+                // Show remove button
+                const removeBtn = template.querySelector('.remove-btn');
+                removeBtn.style.display = 'inline-block';
+                removeBtn.onclick = function() {
+                    template.remove();
+                    updateQuestionNumbers();
+                };
+
+                container.appendChild(template);
+                console.log('已添加新题目项，总数:', container.querySelectorAll('.question-item').length);
             });
 
-            // Show remove button
-            const removeBtn = template.querySelector('.remove-btn');
-            removeBtn.style.display = 'inline-block';
-            removeBtn.onclick = function() {
-                template.remove();
-                updateQuestionNumbers();
-            };
-
-            container.appendChild(template);
-        });
-
         function updateQuestionNumbers() {
+            console.log('更新题目序号');
             const items = container.querySelectorAll('.question-item');
             questionCount = items.length;
             items.forEach((item, index) => {
@@ -128,6 +160,30 @@
                         updateQuestionNumbers();
                     };
                 }
+            });
+        }
+        // 页面加载后遍历所有题目项，输出每个 input/textarea/select 的 name、id、required 属性
+        setTimeout(() => {
+            const items = container.querySelectorAll('.question-item');
+            items.forEach((item, idx) => {
+                const fields = item.querySelectorAll('input, textarea, select');
+                fields.forEach(f => {
+                    console.log(`题目${idx+1}字段:`, f.tagName, 'name:', f.name, 'id:', f.id, 'required:', f.required, 'value:', f.value);
+                });
+            });
+        }, 500);
+        // 表单提交调试输出
+        const addForm = document.getElementById('addForm');
+        const saveAllBtn = document.getElementById('save-all-btn');
+        if (saveAllBtn && addForm) {
+            saveAllBtn.addEventListener('click', function(e) {
+                e.preventDefault();
+                addForm.submit();
+            });
+        }
+        if (addForm) {
+            addForm.addEventListener('submit', function(e) {
+                console.log('表单提交事件被触发');
             });
         }
     });

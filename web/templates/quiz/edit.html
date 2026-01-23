@@ -60,6 +60,6 @@
             <div class="form-text">个人题目仅自己可见和管理，公共题目所有人可见。</div>
     </div>
     <button type="submit" class="btn btn-primary">保存修改</button>
-    <a href="/manage" class="btn btn-secondary">取消</a>
+    <a href="{{ url_for('exam.start_exam') }}" class="btn btn-secondary">取消</a>
 </form>
 {% endblock %}

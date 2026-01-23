@@ -1,5 +1,3 @@
-import eventlet
-eventlet.monkey_patch()
 from web.extensions import socketio
 from web.extensions import db, cache_redis
 from web.models import WorkshopDraft
@@ -95,7 +93,6 @@ def get_socket_emitter():
     Config = get_config()
     try:
         return SocketIO(
-            async_mode='eventlet',
             cors_allowed_origins='*',
             message_queue=f"redis://{Config.REDIS_HOST}:{Config.REDIS_PORT}/0"
         )

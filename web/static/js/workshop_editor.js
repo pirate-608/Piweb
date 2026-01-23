@@ -618,10 +618,25 @@ document.getElementById('save-btn').onclick = function() {
 };
 
 // ========== AI续写功能 ========== 
+
+// 防抖函数
+function debounceAIContinue(fn, delay = 1500) {
+  let timer = null;
+  return function(...args) {
+    if (timer) clearTimeout(timer);
+    timer = setTimeout(() => {
+      fn.apply(this, args);
+    }, delay);
+  };
+}
+
 window.aiContinue = function(contentId = 'content', tempId = 'ai-temperature', statusId = 'ai-status') {
   const prompt = document.getElementById(contentId).value;
   const temperature = parseFloat(document.getElementById(tempId).value) || 0.7;
   const status = document.getElementById(statusId);
+  // 联网搜索复选框
+  const webSearchBox = document.getElementById('ai-web-search');
+  const web_search = webSearchBox && webSearchBox.checked ? true : false;
   // 获取CSRF Token
   const csrfInput = document.querySelector('input[name="csrf_token"]');
   let csrfToken = csrfInput ? csrfInput.value : '';
@@ -633,7 +648,7 @@ window.aiContinue = function(contentId = 'content', tempId = 'ai-temperature', s
       'Content-Type': 'application/json',
       'X-CSRFToken': csrfToken
     },
-    body: JSON.stringify({ prompt, temperature }),
+    body: JSON.stringify({ prompt, temperature, web_search }),
     credentials: 'include'
   })
     .then(r => r.json())
@@ -644,6 +659,48 @@ window.aiContinue = function(contentId = 'content', tempId = 'ai-temperature', s
       } else {
         status.textContent = res.error || 'AI续写失败';
       }
+      // 展示AI事实增强（去除JSON痕迹，仅内容）
+      const factsArea = document.getElementById('ai-facts-area');
+      const factsList = document.getElementById('ai-facts-list');
+      const factsRaw = document.getElementById('ai-facts-raw');
+      if (factsArea && factsList && factsRaw) {
+        factsList.innerHTML = '';
+        factsRaw.textContent = '';
+        let facts = res.facts;
+        if (facts) {
+          factsArea.style.display = '';
+          // 如果是字符串且看起来是JSON数组，尝试解析
+          if (typeof facts === 'string') {
+            try {
+              const parsed = JSON.parse(facts);
+              if (Array.isArray(parsed)) facts = parsed;
+            } catch (e) {}
+          }
+          if (Array.isArray(facts)) {
+            facts.forEach(f => {
+              const li = document.createElement('li');
+              li.textContent = typeof f === 'string' ? f : String(f);
+              factsList.appendChild(li);
+            });
+          } else if (typeof facts === 'string') {
+            // 按换行分割
+            const arr = facts.split(/\r?\n/).filter(Boolean);
+            if (arr.length > 1) {
+              arr.forEach(f => {
+                const li = document.createElement('li');
+                li.textContent = f;
+                factsList.appendChild(li);
+              });
+            } else {
+              factsRaw.textContent = facts;
+            }
+          } else {
+            factsRaw.textContent = String(facts);
+          }
+        } else {
+          factsArea.style.display = 'none';
+        }
+      }
     })
     .catch(() => { status.textContent = '网络异常'; });
 };
@@ -651,7 +708,7 @@ window.aiContinue = function(contentId = 'content', tempId = 'ai-temperature', s
 document.addEventListener('DOMContentLoaded', function() {
   const aiBtn = document.getElementById('ai-continue-btn');
   if (aiBtn) {
-    aiBtn.onclick = function() { window.aiContinue(); };
+    aiBtn.onclick = debounceAIContinue(function() { window.aiContinue(); }, 1500);
   }
 });
 

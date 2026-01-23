@@ -2,6 +2,10 @@ from web.models import SystemSetting
 
 # 公告渲染辅助函数，文件顶级定义
 # (Duplicate definition removed; original is at the top of the file)
+from web.models import SystemSetting
+
+# 公告渲染辅助函数，文件顶级定义
+from web.utils.render_utils import render_content
 import os
 import uuid
 import mimetypes
@@ -339,7 +343,7 @@ def edit_question(id):
             return redirect(url_for('admin_bp.manage'))
     # GET 或未通过校验时渲染页面
     question_html = render_content(q.content, getattr(q, 'mode', 'html')) if q else ''
-    return render_template('edit.html', question=q, question_html=question_html, id=id, categories=[]) # categories 可补全
+    return render_template('quiz/edit.html', question=q, question_html=question_html, id=id, categories=[]) # categories 可补全
 
 @admin_bp.route('/admin/queue')
 @login_required

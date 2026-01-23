@@ -1,28 +1,45 @@
+# --- Web 框架与核心 ---
 Flask>=2.2
 Flask-SQLAlchemy
 Flask-Login
 Flask-WTF>=1.1
-waitress
-psycopg2-binary
-redis
-celery
-gunicorn
-eventlet
-requests
-itsdangerous>=2.0
-werkzeug
-python-dotenv
 Flask-Session>=0.5
 Flask-Cors
-flask-socketio[redis]
-pillow
-Flask-Migrate
-#watchdog
-markdown2
 Flask-admin
-## Flask-Uploads 已移除，统一用Flask原生secure_filename和自定义保存
-Flask-Dropzone
-Flask-Mail
+werkzeug
+itsdangerous>=2.0
+
+# --- 数据库相关 ---
+psycopg2-binary
+Flask-Migrate
+
+# --- 任务队列与异步 ---
+celery
+redis
+gevent>=21.8.0
+gevent-websocket
+gunicorn
+waitress
+
+# --- WebSocket/实时推送 ---
+flask-socketio[redis]
+
+# --- 工具/通用依赖 ---
+requests
+python-dotenv
+pillow
+markdown2
+
+# --- 文件/文档处理 ---
 PyPDF2
 python-docx
+
+# --- 邮件/上传/前端集成 ---
+Flask-Dropzone
+Flask-Mail
+
+# --- AI/第三方服务 ---
 dashscope
+
+# --- 其他/开发辅助 ---
+#watchdog
