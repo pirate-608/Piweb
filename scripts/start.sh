@@ -37,7 +37,12 @@ if docker-compose ps | grep -q 'Up'; then
   exit 0
 fi
 
+# 根据环境选择是否 build
 echo "[INFO] 启动 docker-compose..."
-docker-compose up -d --build
+if [ "$env" = "prod" ]; then
+  docker-compose up -d
+else
+  docker-compose up -d --build
+fi
 
 echo "[SUCCESS] 服务已启动，环境：$env"

@@ -141,12 +141,12 @@ def _initialize_extensions(app):
 
 def _check_database_version(app):
     """检查数据库迁移版本"""
-    from sqlalchemy import inspect
-    
+    from sqlalchemy import inspect, text
+
     inspector = inspect(db.engine)
     if 'alembic_version' in inspector.get_table_names():
         try:
-            result = db.session.execute('SELECT version_num FROM alembic_version').first()
+            result = db.session.execute(text('SELECT version_num FROM alembic_version')).first()
             if not result:
                 print("[FATAL] 数据库版本号未检测到，程序终止。", file=sys.stderr)
                 sys.exit(101)
